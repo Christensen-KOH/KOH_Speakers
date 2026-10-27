@@ -1,0 +1,24 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "tankkit-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--port", "8080", "--open", "false"],
+      "port": 8080
+    },
+    {
+      "name": "tankkit-server",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server/index.ts"],
+      "port": 8787,
+      "autoPort": false
+    },
+    {
+      "name": "tankkit-live",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "live"],
+      "port": 8787
+    }
+  ]
+}

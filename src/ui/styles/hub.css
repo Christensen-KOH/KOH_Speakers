@@ -1,0 +1,30 @@
+/* Tab strip of the Command Hub, floating above the question sheet / shop. */
+.tk-hub-tabs {
+  position: absolute;
+  top: 1cqh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  gap: 0.5cqw;
+  padding: 0.4cqh 0.6cqw;
+  border-radius: 999px;
+  font-size: 2cqh;
+}
+
+.tk-hub-tabs[hidden] { display: none; }
+
+.tk-hub-tab {
+  font: inherit;
+  font-weight: 800;
+  color: #fff;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.25em 1em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tk-hub-tab:hover { background: rgba(255, 255, 255, 0.15); }
+.tk-hub-tab.is-active { background: #ffcf3d; color: #1a1d33; }

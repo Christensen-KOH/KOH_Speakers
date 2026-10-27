@@ -1,0 +1,183 @@
+/* In-level HUD. Sized in container units (cqh/cqw) of .tk-ui-layer so it
+   scales with the game stage. */
+.tk-hud {
+  position: absolute;
+  top: 0.5cqh;
+  left: 7cqw;
+  right: 13.5cqw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1cqw;
+  pointer-events: none;
+  font-size: 2.1cqh;
+}
+
+.tk-hud[hidden],
+.tk-hud-alert[hidden],
+.tk-hud-toast[hidden] {
+  display: none;
+}
+
+.tk-hud.is-multi { justify-content: space-between; }
+
+.tk-hud-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.25em 0.7em;
+  border-radius: 999px;
+}
+
+.tk-hud-label {
+  font-weight: 800;
+  color: var(--tk-text-muted);
+}
+
+.tk-hud-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tk-hud-cash { color: var(--tk-cash); min-width: 3.2em; }
+.tk-hud-shells { color: var(--tk-shells); }
+.tk-hud-streak { color: var(--tk-streak); }
+.tk-hud-hearts { color: #ff6b81; letter-spacing: 0.05em; }
+
+.tk-hud-shells.is-empty { color: var(--tk-wrong); animation: tk-blink 0.8s steps(2) infinite; }
+
+.tk-hud-fuel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  color: var(--tk-fuel);
+}
+
+.tk-hud-fuel-bar {
+  width: 5em;
+  height: 0.55em;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+.tk-hud-fuel-bar > div {
+  height: 100%;
+  background: var(--tk-fuel);
+  border-radius: inherit;
+  transform-origin: left;
+  transition: transform 120ms linear;
+}
+
+.tk-hud-fuel.is-low .tk-hud-fuel-bar > div { background: var(--tk-wrong); }
+.tk-hud-fuel.is-low { color: var(--tk-wrong); }
+
+.tk-hud-wave {
+  padding: 0.25em 0.8em;
+  border-radius: 999px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.tk-hud-wave.is-boss { color: #ff6b81; }
+
+.tk-hud-timer { font-variant-numeric: tabular-nums; color: var(--tk-cash); }
+.tk-hud-timer.is-ending { color: #ff6b81; animation: tk-blink 1s steps(2) infinite; }
+.tk-hud-timer[hidden] { display: none; }
+.tk-hud-wave[hidden] { display: none; }
+
+.tk-hud-alert {
+  position: absolute;
+  top: 6.5cqh;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.45em 1em;
+  border-radius: 12px;
+  background: rgba(255, 79, 109, 0.92);
+  color: #fff;
+  font-size: 2.2cqh;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+  animation: tk-pulse 1s ease-in-out infinite;
+}
+
+.tk-hud-toast {
+  position: absolute;
+  top: 9cqh;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.45em 1em;
+  border-radius: 12px;
+  font-size: 2cqh;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.tk-hud-toast kbd {
+  font-size: 0.85em;
+}
+
+.tk-popup {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 2.6cqh;
+  font-weight: 900;
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6), 0 0 10px rgba(0, 0, 0, 0.5);
+  animation: tk-float 1.1s ease-out forwards;
+}
+
+.tk-popup--cash { color: var(--tk-cash); }
+.tk-popup--shells { color: var(--tk-shells); }
+.tk-popup--fuel { color: var(--tk-fuel); }
+.tk-popup--spend { color: #ff8a9c; }
+
+@keyframes tk-float {
+  0% { opacity: 0; transform: translate(-50%, -20%) scale(0.6); }
+  15% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  30% { transform: translate(-50%, -60%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -180%) scale(1); }
+}
+
+@keyframes tk-blink {
+  50% { opacity: 0.35; }
+}
+
+@keyframes tk-pulse {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tk-hud-alert,
+  .tk-hud-shells.is-empty { animation: none; }
+  .tk-popup { animation-name: tk-fade; }
+}
+
+@keyframes tk-fade {
+  0%, 70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.tk-hud-hub {
+  pointer-events: auto;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  color: #ffcf3d;
+  background: rgba(255, 207, 61, 0.15);
+  border: 1px solid rgba(255, 207, 61, 0.55);
+  border-radius: 999px;
+  padding: 0.1em 0.7em;
+  white-space: nowrap;
+}
+
+.tk-hud-hub:hover { background: rgba(255, 207, 61, 0.3); }

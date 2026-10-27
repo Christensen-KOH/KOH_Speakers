@@ -1,0 +1,187 @@
+/* Host Options: pre-game setup (mode, kit, balance). */
+.tk-host {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  padding: 3%;
+  background: rgba(6, 8, 20, 0.6);
+}
+
+.tk-host-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 18px 22px;
+}
+
+.tk-host-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-right: 4px;
+}
+
+.tk-host-section h2 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--tk-text-muted);
+}
+
+.tk-host-modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.tk-host-mode {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+
+.tk-host-mode:hover { background: rgba(255, 255, 255, 0.1); }
+
+.tk-host-mode:has(input:checked) {
+  border-color: var(--tk-correct);
+  background: rgba(25, 195, 125, 0.14);
+}
+
+.tk-host-mode:has(input:focus-visible) {
+  outline: 2px solid var(--tk-fuel);
+  outline-offset: 2px;
+}
+
+.tk-host-mode input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tk-host-mode-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.tk-host-mode-icon { font-size: 22px; }
+
+.tk-host-players {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--tk-tile-2);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.tk-host-mode-desc {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--tk-text-muted);
+}
+
+.tk-host-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px 18px;
+}
+
+.tk-host-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tk-host-field > span {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tk-host-field small {
+  font-size: 12px;
+  color: var(--tk-text-muted);
+}
+
+.tk-host-field[hidden] { display: none; }
+
+.tk-segmented {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  gap: 3px;
+}
+
+.tk-segmented label {
+  flex: 1;
+  position: relative;
+}
+
+.tk-segmented input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tk-segmented span {
+  display: block;
+  padding: 7px 12px;
+  border-radius: 9px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tk-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tk-segmented input:checked + span {
+  background: var(--tk-tile-2);
+  color: #fff;
+}
+
+.tk-segmented input:focus-visible + span {
+  outline: 2px solid var(--tk-fuel);
+}
+
+.tk-host-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.tk-host-summary {
+  margin-right: auto;
+  font-size: 13px;
+  color: var(--tk-text-muted);
+}
+
+.tk-btn--start {
+  padding: 12px 26px;
+  font-size: 18px;
+  background: var(--tk-correct);
+}
+
+.tk-host-controls {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--tk-text-muted);
+}
+
+.tk-host-controls kbd { margin: 0 1px; }

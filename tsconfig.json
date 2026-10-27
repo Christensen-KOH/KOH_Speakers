@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "lib": ["es2020", "dom", "dom.iterable"],
+    "target": "es2020",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "types": ["vite/client"],
+    "skipLibCheck": true
+  },
+  "include": ["src", "vite.config.ts"]
+}

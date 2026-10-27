@@ -1,0 +1,26 @@
+/* Gimkit-inspired palette and glass surfaces for all DOM overlays. */
+:root {
+  --tk-font: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+
+  --tk-glass-bg: rgba(20, 22, 40, 0.62);
+  --tk-glass-border: rgba(255, 255, 255, 0.16);
+  --tk-glass-blur: 14px;
+  --tk-radius: 18px;
+  --tk-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+
+  --tk-text: #ffffff;
+  --tk-text-muted: rgba(255, 255, 255, 0.7);
+
+  /* Answer tile colours (keys 1-4). */
+  --tk-tile-1: #ff4f6d;
+  --tk-tile-2: #3d8bff;
+  --tk-tile-3: #ffb800;
+  --tk-tile-4: #19c37d;
+
+  --tk-cash: #ffd84d;
+  --tk-fuel: #4dd4ff;
+  --tk-shells: #ff9f43;
+  --tk-streak: #ff6b3d;
+  --tk-correct: #19c37d;
+  --tk-wrong: #ff4f6d;
+}

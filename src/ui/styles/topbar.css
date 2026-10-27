@@ -1,0 +1,83 @@
+.tk-topbar {
+  box-sizing: border-box;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+  height: var(--tk-topbar-h, 48px);
+  padding: 0 8px;
+  background: #0a0e17;
+  position: relative;
+  z-index: 30;
+}
+
+.tk-topbar-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tk-topbar-btn {
+  font: 800 18px/1 var(--tk-font, system-ui, sans-serif);
+  min-width: 40px;
+  height: 34px;
+  color: #e8ecf8;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+}
+
+.tk-topbar-btn:hover { background: rgba(255, 255, 255, 0.2); }
+
+/* Teacher's [ 👑 Host ] pill: collapsed to one button, opens a small card */
+.tk-hostpill { position: relative; }
+
+.tk-hostpill[hidden],
+.tk-hostpill-menu[hidden] { display: none; }
+
+.tk-hostpill-toggle { padding: 0 14px; font-size: 15px; color: #ffcf3d; }
+
+.tk-hostpill-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 220px;
+  padding: 10px;
+  z-index: 40;
+}
+
+.tk-hostpill-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: #e8ecf8;
+  font: 600 13px var(--tk-font, system-ui, sans-serif);
+}
+
+.tk-hostpill-label { opacity: 0.7; }
+.tk-hostpill-code { font-size: 18px; font-weight: 800; letter-spacing: 0.08em; color: #ffcf3d; }
+.tk-hostpill-timer { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+.tk-hostpill-action {
+  font: 700 14px var(--tk-font, system-ui, sans-serif);
+  padding: 8px 10px;
+  text-align: left;
+  color: #e8ecf8;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+.tk-hostpill-action:hover:not(:disabled) { background: rgba(255, 255, 255, 0.2); }
+.tk-hostpill-action:disabled { opacity: 0.45; cursor: default; }
+.tk-hostpill-danger { color: #ff8a98; border-color: rgba(255, 107, 129, 0.5); }
+
+.tk-topbar-btn[hidden] { display: none; }
+.tk-topbar-studio { padding: 0 14px; font-size: 14px; }

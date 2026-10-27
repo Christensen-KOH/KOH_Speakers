@@ -1,0 +1,343 @@
+/* Live class: teacher dashboard and student join screen. */
+.tk-live {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  padding: 3%;
+  background: rgba(6, 8, 20, 0.7);
+}
+
+.tk-live-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 18px 22px;
+}
+
+.tk-live-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-right: 4px;
+}
+
+.tk-live-conn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tk-text-muted);
+}
+
+.tk-live-conn::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tk-shells);
+}
+
+.tk-live-conn.is-open::before { background: var(--tk-correct); }
+.tk-live-conn.is-idle { display: none; }
+
+.tk-live-code-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px 28px;
+  padding: 16px 20px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.tk-live-code-label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tk-text-muted);
+}
+
+.tk-live-code {
+  font-size: 64px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--tk-cash);
+}
+
+.tk-live-urls {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 15px;
+}
+
+.tk-live-urls code {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  user-select: all;
+}
+
+.tk-live-roster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tk-live-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 6px 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  font-weight: 700;
+  animation: tk-pop 300ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+.tk-live-chip.is-offline { opacity: 0.5; }
+
+.tk-live-kick {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--tk-text-muted);
+  font: 700 14px var(--tk-font);
+  line-height: 24px;
+  cursor: pointer;
+}
+
+.tk-live-kick:hover { background: var(--tk-wrong); color: #fff; }
+
+.tk-live-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+}
+
+.tk-live-timer {
+  font-size: 40px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.tk-live-goal {
+  flex: 1;
+  min-width: 220px;
+}
+
+.tk-live-goal-bar {
+  height: 14px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.tk-live-goal-bar > div {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--tk-cash), var(--tk-correct));
+  transform-origin: left;
+  transition: transform 400ms ease;
+}
+
+.tk-live-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tk-live-table th {
+  position: sticky;
+  top: 0;
+  padding: 6px 8px;
+  background: rgba(20, 22, 40, 0.95);
+  color: var(--tk-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tk-live-table td {
+  padding: 7px 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.tk-live-table td.is-num,
+.tk-live-table th.is-num { text-align: right; }
+
+.tk-live-rank { width: 2.5em; font-weight: 900; color: var(--tk-text-muted); }
+.tk-live-table tr:nth-child(1) .tk-live-rank { color: #ffd84d; }
+.tk-live-table tr:nth-child(2) .tk-live-rank { color: #d9e2ec; }
+.tk-live-table tr:nth-child(3) .tk-live-rank { color: #e0a370; }
+
+.tk-live-name { font-weight: 800; }
+.tk-live-name.is-offline { opacity: 0.55; }
+.tk-live-name.is-offline::after { content: ' (offline)'; font-weight: 400; font-size: 12px; }
+
+.tk-live-cash { color: var(--tk-cash); font-weight: 800; }
+
+.tk-live-empty {
+  padding: 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--tk-text-muted);
+  text-align: center;
+}
+
+.tk-live-mistakes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tk-live-podium {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.tk-live-podium > div {
+  min-width: 140px;
+  padding: 10px 14px;
+  border-radius: 14px 14px 4px 4px;
+  background: rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.tk-live-podium strong { display: block; font-size: 18px; }
+.tk-live-podium .tk-live-cash { font-size: 20px; }
+.tk-live-podium > div:nth-child(2) { padding-top: 30px; background: rgba(255, 216, 77, 0.16); }
+
+/* Student join */
+.tk-join {
+  width: min(100%, 460px);
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 26px 26px 22px;
+}
+
+.tk-join h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.tk-join-code {
+  font-size: 34px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.3em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.tk-join-big {
+  padding: 14px;
+  font-size: 20px;
+}
+
+.tk-join-wait {
+  text-align: center;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.tk-join-wait strong { color: var(--tk-cash); }
+
+.tk-join-pulse {
+  display: inline-block;
+  font-size: 40px;
+  animation: tk-pulse-soft 1.4s ease-in-out infinite;
+}
+
+@keyframes tk-pulse-soft {
+  50% { transform: scale(1.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tk-live-chip, .tk-join-pulse { animation: none; }
+}
+
+/* Compact host card while the battlefield is on screen */
+.tk-live.is-compact {
+  /* The [ 👑 Host ] pill in the top bar replaces the corner card */
+  display: none;
+  inset: auto;
+  top: 1.5%;
+  right: 1%;
+  width: min(250px, 26%);
+  max-height: 70%;
+  padding: 0;
+  background: none;
+}
+
+.tk-live.is-compact .tk-live-panel {
+  padding: 10px 12px;
+  background: rgba(20, 22, 40, 0.78);
+}
+
+.tk-live.is-compact .tk-km-header { margin-bottom: 6px; }
+.tk-live.is-compact .tk-km-title { font-size: 15px; }
+.tk-live.is-compact .tk-live-conn { display: none; }
+.tk-live.is-compact .tk-live-body { gap: 6px; }
+.tk-live.is-compact .tk-host-footer { margin-top: 8px; gap: 6px; }
+.tk-live.is-compact .tk-live-timer { font-size: 20px; }
+
+.tk-live-mini-status {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tk-live-mini-code {
+  font-weight: 800;
+  color: var(--tk-cash);
+}
+
+.tk-live-mini-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.tk-live-mini-list li {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.tk-live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}

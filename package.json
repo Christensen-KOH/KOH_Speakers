@@ -1,0 +1,42 @@
+{
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "start": "vite",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p server",
+    "lint": "eslint \"src/**\" --max-warnings=0 --ext .js,.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "server": "node server/index.ts",
+    "live": "npm run build && npm run server"
+  },
+  "dependencies": {
+    "@hapi/joi": "^17.1.0",
+    "@types/hapi__joi": "^16.0.12",
+    "peerjs": "^1.5.5",
+    "stats.js": "^0.17.0",
+    "ws": "^8.18.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^2.14.0",
+    "@typescript-eslint/parser": "^2.14.0",
+    "eslint": "^6.8.0",
+    "eslint-config-prettier": "^6.9.0",
+    "eslint-plugin-prettier": "^3.1.2",
+    "jsdom": "^26.1.0",
+    "prettier": "^1.19.1",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4"
+  },
+  "name": "tankkit-battle-city",
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  }
+}

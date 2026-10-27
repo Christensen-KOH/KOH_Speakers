@@ -1,0 +1,32 @@
+html,
+body {
+  width: 100vw;
+  width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #0a0e17;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  /* Phones/tablets: no pull-to-refresh or double-tap zoom mid-game */
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.loading {
+  align-items: center;
+  align-self: center;
+  display: flex;
+  flex: 1;
+  color: #fff;
+  font-family: Lucida Console, Courier, monospace;
+  font-size: 32px;
+}

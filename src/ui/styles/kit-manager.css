@@ -1,0 +1,197 @@
+/* Kit Manager: full-stage glass panel for choosing and importing kits. */
+.tk-km {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  padding: 3%;
+  background: rgba(6, 8, 20, 0.6);
+}
+
+.tk-km-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 20px 22px;
+}
+
+.tk-km-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.tk-km-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  margin-right: auto;
+}
+
+.tk-km-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.tk-km-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tk-km-section h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tk-text-muted);
+}
+
+.tk-km-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+}
+
+.tk-km-kit {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+
+.tk-km-kit:hover { background: rgba(255, 255, 255, 0.1); }
+
+.tk-km-kit.is-active {
+  border-color: var(--tk-correct);
+  background: rgba(25, 195, 125, 0.14);
+}
+
+.tk-km-kit input { grid-row: span 2; width: 18px; height: 18px; accent-color: var(--tk-correct); }
+
+.tk-km-kit-name {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.tk-km-kit-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--tk-text-muted);
+}
+
+.tk-km-level {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--tk-tile-2);
+  color: #fff;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.tk-km-actions {
+  grid-column: 2;
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.tk-km-import {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  flex: 1;
+}
+
+.tk-km-import label {
+  font-size: 13px;
+  color: var(--tk-text-muted);
+}
+
+.tk-km-field {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font: 14px var(--tk-font);
+}
+
+.tk-km-field:focus { outline: 2px solid var(--tk-fuel); outline-offset: 1px; }
+
+textarea.tk-km-field {
+  flex: 1;
+  min-height: 120px;
+  resize: none;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 13px;
+}
+
+.tk-km-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.tk-km-help {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--tk-text-muted);
+}
+
+.tk-km-help code {
+  color: #fff;
+  font-size: 12px;
+}
+
+.tk-km-message {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tk-km-message:empty { display: none; }
+.tk-km-message.is-error { color: #ff8a9c; }
+.tk-km-message.is-success { color: #6ff0b6; }
+
+.tk-km-message ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--tk-text-muted);
+}
+
+.tk-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .tk-km-body {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+}

@@ -1,0 +1,166 @@
+/* Upgrade Shop: centred glass card over the playfield. */
+.tk-shop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6% 3% 3%;
+  background: rgba(6, 8, 20, 0.45);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 160ms ease, visibility 0s linear 160ms;
+}
+
+.tk-shop.is-open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 160ms ease;
+}
+
+.tk-shop-panel {
+  width: min(100%, 820px);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px 14px;
+  transform: scale(0.96);
+  transition: transform 200ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.tk-shop.is-open .tk-shop-panel { transform: scale(1); }
+
+.tk-shop-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.tk-shop-title {
+  margin: 0 auto 0 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.tk-shop-cash {
+  font-size: 20px;
+  padding: 4px 14px;
+}
+
+.tk-shop-grid {
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
+  padding-right: 2px;
+}
+
+.tk-shop-group {
+  grid-column: 1 / -1;
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--tk-text-muted);
+}
+
+.tk-shop-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 2px 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--tk-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease, transform 80ms ease;
+}
+
+.tk-shop-item:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+.tk-shop-item:active:not(:disabled) { transform: translateY(2px); }
+.tk-shop-item:focus-visible { outline: 2px solid var(--tk-fuel); outline-offset: 2px; }
+.tk-shop-item:disabled { cursor: default; }
+
+.tk-shop-item.is-owned { border-color: rgba(25, 195, 125, 0.6); }
+.tk-shop-item.is-locked,
+.tk-shop-item.is-unavailable { opacity: 0.55; }
+.tk-shop-item.is-short .tk-shop-price { color: var(--tk-text-muted); }
+
+.tk-shop-item.is-bought {
+  animation: tk-bounce 360ms cubic-bezier(0.2, 1.6, 0.4, 1);
+  border-color: var(--tk-cash);
+}
+
+.tk-shop-icon {
+  grid-row: span 2;
+  font-size: 26px;
+  line-height: 1;
+  text-align: center;
+}
+
+.tk-shop-name {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.tk-shop-desc {
+  grid-column: 2 / 4;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--tk-text-muted);
+}
+
+.tk-shop-price {
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--tk-cash);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tk-shop-item.is-owned .tk-shop-price { color: var(--tk-correct); }
+
+.tk-shop-key {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  display: none;
+}
+
+.tk-shop-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--tk-text-muted);
+}
+
+.tk-shop-message {
+  margin-right: auto;
+  font-weight: 700;
+  color: var(--tk-text);
+}
+
+.tk-shop-message.is-error { color: #ff8a9c; }
+.tk-shop-message.is-success { color: #6ff0b6; }
+
+.tk-shop-item-keyhint {
+  font-size: 11px;
+  color: var(--tk-text-muted);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tk-shop, .tk-shop-panel { transition: none; }
+  .tk-shop-item.is-bought { animation: none; }
+}

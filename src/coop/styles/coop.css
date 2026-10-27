@@ -1,0 +1,99 @@
+/* Co-op battlefield: name tags over student tanks, host status card,
+   spectator banner. */
+.tk-ui-layer > .tk-tags {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.tk-tag {
+  --tk-tag-color: #fff;
+
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transform: translate(-50%, -100%);
+  font-family: var(--tk-font);
+  pointer-events: none;
+  will-change: left, top;
+}
+
+.tk-tag-name {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--tk-tag-color);
+  font-size: max(10px, 1.5cqh);
+  font-weight: 800;
+  white-space: nowrap;
+  text-shadow: 0 1px 0 #000;
+}
+
+.tk-tag.is-me .tk-tag-name {
+  outline: 2px solid var(--tk-tag-color);
+}
+
+.tk-tag-bar {
+  width: max(28px, 4.5cqw);
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.tk-tag-bar > div {
+  height: 100%;
+  background: #ff6b81;
+  transform-origin: left;
+}
+
+.tk-tag-bar[hidden],
+.tk-tag-bubble[hidden] {
+  display: none;
+}
+
+.tk-tag-bubble {
+  font-size: max(14px, 2.2cqh);
+  line-height: 1;
+  animation: tk-tag-bob 1.2s ease-in-out infinite;
+}
+
+@keyframes tk-tag-bob {
+  50% { transform: translateY(-3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tk-tag-bubble { animation: none; }
+}
+
+/* Students without a tank (battlefield full) */
+.tk-ui-layer > .tk-spectate {
+  position: absolute;
+  left: 50%;
+  bottom: 4cqh;
+  transform: translateX(-50%);
+  padding: 0.5em 1em;
+  border-radius: 12px;
+  font-size: max(12px, 1.9cqh);
+  font-weight: 700;
+  text-align: center;
+  pointer-events: none;
+}
+
+.tk-spectate[hidden] { display: none; }
+
+/* Waiting for the first world snapshot */
+.tk-ui-layer > .tk-coop-connecting {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 800 max(14px, 2.4cqh) var(--tk-font);
+  color: var(--tk-text-muted);
+  pointer-events: none;
+}
+
+.tk-coop-connecting[hidden] { display: none; }
