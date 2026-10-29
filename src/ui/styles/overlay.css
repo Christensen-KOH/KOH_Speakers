@@ -71,3 +71,49 @@
     position: fixed;
   }
 }
+
+/* Portrait touch phones: battlefield edge-to-edge under the top bar, the rest
+   of the screen is the Quick Dashboard Dock (no dead space). */
+.tk-dock { display: none; }
+
+@media (max-aspect-ratio: 1/1) {
+  .tk-has-touch .tk-stage {
+    margin-block: 0 auto;
+  }
+
+  .tk-has-touch .tk-ui-layer > .tk-dock:not([hidden]) {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: calc(var(--tk-topbar-h, 48px) + 100dvw * 896 / 1024);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    gap: 10px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    box-sizing: border-box;
+    background: #0a0e17;
+    pointer-events: auto;
+  }
+
+  .tk-dock-status {
+    text-align: center;
+    color: #e8ecf8;
+    font: 800 clamp(14px, 4.2vw, 20px) var(--tk-font, system-ui, sans-serif);
+    white-space: pre;
+  }
+
+  .tk-dock-buttons { display: flex; gap: 12px; flex: 1; max-height: 140px; }
+
+  .tk-dock-btn {
+    flex: 2;
+    border: 0;
+    border-radius: 16px;
+    background: #ffcf3d;
+    color: #1a1d33;
+    font: 900 clamp(16px, 5vw, 24px) var(--tk-font, system-ui, sans-serif);
+  }
+
+  .tk-dock-btn.is-shop { flex: 1; background: #19c37d; color: #04281a; }
+}

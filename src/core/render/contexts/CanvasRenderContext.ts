@@ -10,6 +10,7 @@ export class CanvasRenderContext extends RenderContext {
 
   public init(): void {
     this.context = this.canvas.getContext('2d');
+    this.context.imageSmoothingEnabled = false;
   }
 
   public drawImage(

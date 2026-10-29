@@ -15,7 +15,9 @@
   "dependencies": {
     "@hapi/joi": "^17.1.0",
     "@types/hapi__joi": "^16.0.12",
+    "@types/qrcode": "^1.5.6",
     "peerjs": "^1.5.5",
+    "qrcode": "^1.5.4",
     "stats.js": "^0.17.0",
     "ws": "^8.18.2"
   },

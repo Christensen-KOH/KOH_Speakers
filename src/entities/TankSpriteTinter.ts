@@ -63,6 +63,7 @@ export class TankSpriteTinter {
       canvas.height = sheet.getHeight();
 
       const context = canvas.getContext('2d', { willReadFrequently: true });
+      context.imageSmoothingEnabled = false;
       context.drawImage(sheet.getElement(), 0, 0);
 
       sourceSprites.forEach((sprite) => {

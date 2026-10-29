@@ -1,3 +1,5 @@
+import { showQrModal } from './qr';
+
 import './styles/topbar.css';
 
 export interface HostPillActions {
@@ -45,6 +47,14 @@ export class HostPill {
       this.setOpen(!this.open);
     });
 
+    const qr = el('button', 'tk-topbar-btn tk-hostpill-qr', '📱 QR');
+    qr.type = 'button';
+    qr.title = 'Show the join QR code';
+    qr.addEventListener('click', () => {
+      qr.blur();
+      showQrModal(this.code.textContent ?? '');
+    });
+
     const codeRow = el('div', 'tk-hostpill-row');
     codeRow.append(el('span', 'tk-hostpill-label', 'Room Code'), this.code, this.timer);
 
@@ -58,7 +68,7 @@ export class HostPill {
       this.action('⏹️ End Match', actions.end, false, 'tk-hostpill-danger'),
     );
 
-    this.wrapper.append(this.toggle, this.menu);
+    this.wrapper.append(qr, this.toggle, this.menu);
     this.wrapper.hidden = true;
     slot.append(this.wrapper);
   }

@@ -1,3 +1,4 @@
+import { createQrCanvas, joinUrl } from './qr';
 import { Subject } from '../core/Subject';
 import { exportKit, KitLibrary } from '../kits';
 import {
@@ -366,7 +367,8 @@ export class LiveHostPanel {
       );
     }
 
-    box.append(codeBlock, urls);
+    const qr = createQrCanvas(joinUrl(room.code, origins[0]), 220);
+    box.append(qr, codeBlock, urls);
     return box;
   }
 

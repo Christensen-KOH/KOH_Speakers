@@ -82,6 +82,7 @@ export class ColorSpriteFontGenerator {
     }
 
     const context = canvas.getContext('2d');
+    context.imageSmoothingEnabled = false;
 
     const prevHeight = canvas.height;
 

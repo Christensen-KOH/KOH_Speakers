@@ -60,6 +60,7 @@ export class CommandHub {
     this.trackKeyboard();
 
     hud.hubRequested.addListener((playerIndex) => this.toggle(playerIndex));
+    hud.hubTabRequested.addListener(({ tab, player }) => this.openTab(tab, player));
     // Controllers acquire the gate just before their panel opens.
     gate.changed.addListener(() => window.setTimeout(() => this.refresh(), 0));
   }
@@ -89,6 +90,16 @@ export class CommandHub {
     viewport.addEventListener('resize', sync);
     viewport.addEventListener('scroll', sync);
     sync();
+  }
+
+  /** Dock buttons: open on a given tab, or jump to it when the Hub is open. */
+  private openTab(tab: HubTab, playerIndex: number): void {
+    if (this.questions.isOpen() || this.shop.isOpen()) {
+      this.switchTo(tab);
+    } else if (this.gate.isFree()) {
+      this.playerIndex = playerIndex;
+      this.open(tab);
+    }
   }
 
   public toggle(playerIndex = 0): void {

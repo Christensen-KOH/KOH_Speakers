@@ -57,12 +57,17 @@ interface PlayerWidgets {
 export class Hud {
   // The player clicked the "⚡ Hub" button.
   public readonly hubRequested = new Subject<number>();
+  // Portrait dock buttons: open the Hub straight on a tab.
+  public readonly hubTabRequested = new Subject<{ tab: 'questions' | 'shop'; player: number }>();
   private readonly container: HTMLElement;
   private readonly bar = el('div', 'tk-hud');
   private readonly wave = el('div', 'tk-hud-wave tk-glass');
   private readonly timer = el('div', 'tk-hud-wave tk-hud-timer tk-glass');
   private readonly alert = el('div', 'tk-hud-alert');
   private readonly toastEl = el('div', 'tk-hud-toast tk-glass');
+  // Portrait phones: thumb-friendly dock under the battlefield (CSS-gated).
+  private readonly dock = el('div', 'tk-dock');
+  private readonly dockStatus = el('div', 'tk-dock-status');
   private players: PlayerWidgets[] = [];
   private toastTimer: number = null;
 
@@ -72,7 +77,17 @@ export class Hud {
     this.alert.hidden = true;
     this.toastEl.hidden = true;
     this.alert.setAttribute('role', 'status');
-    container.append(this.bar, this.alert, this.toastEl);
+    this.dock.hidden = true;
+    const answer = el('button', 'tk-dock-btn', '⚡ Answer Questions');
+    const shop = el('button', 'tk-dock-btn is-shop', '🛒 Shop');
+    answer.type = 'button';
+    shop.type = 'button';
+    answer.addEventListener('click', () => this.hubTabRequested.notify({ tab: 'questions', player: 0 }));
+    shop.addEventListener('click', () => this.hubTabRequested.notify({ tab: 'shop', player: 0 }));
+    const buttons = el('div', 'tk-dock-buttons');
+    buttons.append(answer, shop);
+    this.dock.append(this.dockStatus, buttons);
+    container.append(this.bar, this.alert, this.toastEl, this.dock);
   }
 
   public show(playerCount: number): void {
@@ -92,10 +107,12 @@ export class Hud {
     this.wave.hidden = true;
     this.timer.hidden = true;
     this.bar.hidden = false;
+    this.dock.hidden = false;
   }
 
   public hide(): void {
     this.bar.hidden = true;
+    this.dock.hidden = true;
     this.alert.hidden = true;
     this.toastEl.hidden = true;
   }
@@ -124,6 +141,12 @@ export class Hud {
       return;
     }
 
+    if (playerIndex === 0) {
+      setText(
+        this.dockStatus,
+        `$${state.cash}   ●${state.shells} shells   ⛽${Math.round(Math.max(0, Math.min(1, state.fuel)) * 100)}%${state.hearts > 1 ? `   🛡 ${state.hearts}` : ''}`,
+      );
+    }
     setText(widgets.cash, `$${state.cash}`);
     setText(widgets.shells, `● ${state.shells}`);
     widgets.shells.classList.toggle('is-empty', state.shells === 0);
