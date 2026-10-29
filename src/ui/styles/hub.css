@@ -14,6 +14,25 @@
 
 .tk-hub-tabs[hidden] { display: none; }
 
+/* The Hub owns the screen: opaque backdrop above everything, and the floating
+   name tags / alerts stay out from under the question text and buttons. */
+.tk-ui-layer > .tk-qm,
+.tk-ui-layer > .tk-shop {
+  z-index: 9999;
+  background: rgba(10, 14, 23, 0.96);
+}
+
+.tk-ui-layer > .tk-hub-tabs {
+  z-index: 10000;
+}
+
+.tk-hub-open .tk-tags,
+.tk-hub-open .tk-hud-alert,
+.tk-hub-open .tk-hud-toast,
+.tk-hub-open .tk-popup {
+  visibility: hidden;
+}
+
 .tk-hub-tab {
   font: inherit;
   font-weight: 800;
@@ -28,3 +47,18 @@
 
 .tk-hub-tab:hover { background: rgba(255, 255, 255, 0.15); }
 .tk-hub-tab.is-active { background: #ffcf3d; color: #1a1d33; }
+
+/* Soft keyboard open: the stage keeps its full-height size, and the question
+   sheet is pinned to the top of the visible area above the keyboard. */
+.tk-kb-open .tk-stage {
+  height: min(calc(var(--tk-full-h) - var(--tk-topbar-h, 48px)), calc(100dvw * 896 / 1024));
+}
+
+.tk-kb-open .tk-ui-layer > .tk-qm {
+  position: fixed;
+  inset: var(--tk-vv-top, 0) 0 auto 0;
+  height: var(--tk-vv-h, 100dvh);
+  align-items: flex-start;
+  padding-top: 8px;
+  overflow-y: auto;
+}

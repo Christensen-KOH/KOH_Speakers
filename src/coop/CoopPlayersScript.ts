@@ -94,8 +94,8 @@ export class CoopPlayersScript extends LevelScript {
         tank.setRemoteLoadout(seat.input.loadout);
       }
 
-      // Answering on a pad is safe: keep a shield up while they think
-      if (seat.input.thinking && tank.shield === null && this.isOnPad(tank)) {
+      // Studying Shield: invulnerable anywhere while the Hub is open
+      if (seat.input.thinking && tank.shield === null) {
         tank.activateShield(THINKING_SHIELD);
       }
     });

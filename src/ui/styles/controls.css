@@ -1,6 +1,5 @@
 /* Device-adaptive controls. Desktop shows nothing; touch devices get an
-   invisible two-zone layer (floating joystick left, fire right) and two
-   compact pills. */
+   invisible full-screen touch surface (tap / drag on the map, no stick). */
 .tk-tz {
   position: fixed;
   inset: 0;
@@ -20,27 +19,4 @@
 .tk-tz-half {
   flex: 1;
   touch-action: none;
-}
-
-.tk-joystick {
-  position: fixed;
-  width: 120px;
-  height: 120px;
-  margin: -60px 0 0 -60px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.25);
-  opacity: 0.35;
-  pointer-events: none;
-}
-
-.tk-joystick-knob {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 48px;
-  height: 48px;
-  margin: -24px 0 0 -24px;
-  border-radius: 50%;
-  background: #fff;
 }

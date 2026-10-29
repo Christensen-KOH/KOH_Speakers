@@ -28,7 +28,7 @@ const WASD: Record<string, Direction> = { w: 'up', a: 'left', s: 'down', d: 'rig
 // Tap fires at once (PrimaryAction); holding keeps firing (SecondaryAction).
 const FIRE_CONTROLS = [InputControl.PrimaryAction, InputControl.SecondaryAction];
 
-// Thumb travel before the joystick counts as a direction (px).
+// Finger travel before a touch counts as a steering drag (px).
 const JOYSTICK_DEAD_ZONE = 14;
 const JOYSTICK_RADIUS = 48;
 
@@ -43,6 +43,8 @@ const ROTATION_DIRECTIONS: Record<Rotation, Direction> = {
 const MOUSE_DRAG_DISTANCE = 8;
 // The tank is "there" once the cursor is this close on both axes (field px).
 const MOUSE_ARRIVE_DISTANCE = 12;
+// A tap farther than 1.5 tiles from the tank drives there (field px).
+const TAP_DRIVE_DISTANCE = config.TILE_SIZE_LARGE * 1.5;
 
 // Full-screen DOM panels bring their own buttons.
 // The host's compact card counts too: the teacher's screen needs no pad.
@@ -85,8 +87,8 @@ function isTypingTarget(target: EventTarget | null): boolean {
  *   the playfield turns toward the cursor and fires, holding right-click (or
  *   left-click + drag) drives toward the cursor, middle-click / side buttons
  *   (or Tab/Q) toggle the Command Hub.
- * - Touch: a floating joystick wherever the thumb lands on the left half,
- *   tap/hold the right half to fire. The Hub button lives in the HUD.
+ * - Touch: tap the map to turn and fire (far taps drive there), drag to steer
+ *   while firing, a second finger fires. No on-screen stick. The Hub button lives in the HUD.
  *
  * Movement and fire go through the input manager as virtual keys, so menus,
  * rebinding and gameplay need no special cases. Aimed shots are published
@@ -108,13 +110,13 @@ export class AdaptiveControls {
   private mode: ControlMode;
 
   private readonly zones = el('div', 'tk-tz');
-  private readonly leftZone = el('div', 'tk-tz-half');
-  private readonly rightZone = el('div', 'tk-tz-half');
-  private readonly joystick = el('div', 'tk-joystick');
-  private readonly knob = el('div', 'tk-joystick-knob');
+  private readonly surface = el('div', 'tk-tz-half');
 
-  private joystickPointer: number | null = null;
-  private joystickOrigin = { x: 0, y: 0 };
+  private touchPointer: number | null = null;
+  private touchOrigin = { x: 0, y: 0 };
+  private touchDragging = false;
+  // Tap on a far tile: drive there ('pending' until the distance is known)
+  private tapDrive: 'pending' | 'on' | null = null;
   private direction: Direction | null = null;
   private readonly firePointers = new Set<number>();
   private readonly heldKeys = new Map<string, InputControl[]>();
@@ -143,21 +145,16 @@ export class AdaptiveControls {
     this.uiLayer = uiLayer;
 
     // --- Touch layer ---
+    // One invisible surface over the battlefield: tap to aim/fire/drive,
+    // drag to steer, a second finger fires. No on-screen stick.
     this.zones.setAttribute('aria-hidden', 'true');
-    this.joystick.append(this.knob);
-    this.joystick.hidden = true;
-    this.zones.append(this.leftZone, this.rightZone, this.joystick);
+    this.zones.append(this.surface);
 
-    this.leftZone.addEventListener('pointerdown', this.handleStickDown);
-    this.leftZone.addEventListener('pointermove', this.handleStickMove);
-    this.leftZone.addEventListener('pointerup', this.handleStickUp);
-    this.leftZone.addEventListener('pointercancel', this.handleStickUp);
-    this.rightZone.addEventListener('pointerdown', this.handleFireDown);
-    this.rightZone.addEventListener('pointerup', this.handleFireUp);
-    this.rightZone.addEventListener('pointercancel', this.handleFireUp);
-    [this.leftZone, this.rightZone].forEach((zone) =>
-      zone.addEventListener('contextmenu', (event) => event.preventDefault()),
-    );
+    this.surface.addEventListener('pointerdown', this.handleTouchDown);
+    this.surface.addEventListener('pointermove', this.handleTouchMove);
+    this.surface.addEventListener('pointerup', this.handleTouchUp);
+    this.surface.addEventListener('pointercancel', this.handleTouchUp);
+    this.surface.addEventListener('contextmenu', (event) => event.preventDefault());
 
     document.body.append(this.zones);
 
@@ -340,7 +337,7 @@ export class AdaptiveControls {
 
   /** True while right-click is held, or left-click is held and dragged. */
   public isMouseDriving(): boolean {
-    return (this.rightHeld || this.leftDragging) && this.gate.isFree();
+    return (this.rightHeld || this.leftDragging || this.tapDrive !== null) && this.gate.isFree();
   }
 
   /** Cursor position on the battlefield (field coordinates), if it moved. */
@@ -365,7 +362,12 @@ export class AdaptiveControls {
     const dy = this.mouse.y - center.y;
     const ax = Math.abs(dx);
     const ay = Math.abs(dy);
+    if (this.tapDrive === 'pending') {
+      // Near taps only turn and fire; far taps drive
+      this.tapDrive = Math.hypot(dx, dy) > TAP_DRIVE_DISTANCE ? 'on' : null;
+    }
     if (ax < MOUSE_ARRIVE_DISTANCE && ay < MOUSE_ARRIVE_DISTANCE) {
+      this.tapDrive = null;
       return -1;
     }
     const horizontal = ax >= ay ? ax >= MOUSE_ARRIVE_DISTANCE : ay < MOUSE_ARRIVE_DISTANCE;
@@ -398,57 +400,87 @@ export class AdaptiveControls {
     this.rightHeld = false;
     this.leftAnchor = null;
     this.leftDragging = false;
+    this.tapDrive = null;
     this.syncMouseDrive(null);
   }
 
-  // --- Touch: floating joystick --------------------------------------------
+  // --- Touch: tap / drag on the battlefield ---------------------------------
 
-  private handleStickDown = (event: PointerEvent): void => {
-    if (this.joystickPointer !== null) {
+  private handleTouchDown = (event: PointerEvent): void => {
+    event.preventDefault();
+    if (this.touchPointer !== null) {
+      // A second finger fires
+      this.handleFireDown(event);
       return;
     }
-    event.preventDefault();
-    this.joystickPointer = event.pointerId;
+    this.touchPointer = event.pointerId;
     try {
-      this.leftZone.setPointerCapture(event.pointerId);
+      this.surface.setPointerCapture(event.pointerId);
     } catch {
       // Release still arrives via pointerup/pointercancel
     }
-    this.joystickOrigin = { x: event.clientX, y: event.clientY };
-    this.joystick.style.left = `${event.clientX}px`;
-    this.joystick.style.top = `${event.clientY}px`;
-    this.knob.style.transform = '';
-    this.joystick.hidden = false;
+    this.touchOrigin = { x: event.clientX, y: event.clientY };
+    this.touchDragging = false;
+    // Tap: turn toward the tile and fire; far taps also drive there
+    const point = this.toFieldPoint(event);
+    if (point !== null) {
+      this.mouse = point;
+      this.mouseMoved = true;
+      this.tapDrive = 'pending';
+      this.aimFire.notify(point);
+    }
   };
 
-  private handleStickMove = (event: PointerEvent): void => {
-    if (event.pointerId !== this.joystickPointer) {
+  private handleTouchMove = (event: PointerEvent): void => {
+    if (event.pointerId !== this.touchPointer) {
       return;
     }
     event.preventDefault();
-    const dx = event.clientX - this.joystickOrigin.x;
-    const dy = event.clientY - this.joystickOrigin.y;
+    let dx = event.clientX - this.touchOrigin.x;
+    let dy = event.clientY - this.touchOrigin.y;
     const distance = Math.hypot(dx, dy);
-    const scale = distance > JOYSTICK_RADIUS ? JOYSTICK_RADIUS / distance : 1;
-    this.knob.style.transform = `translate(${dx * scale}px, ${dy * scale}px)`;
-
-    if (distance < JOYSTICK_DEAD_ZONE) {
-      this.setDirection(null);
-    } else if (Math.abs(dx) > Math.abs(dy)) {
-      // Four-way like the NES pad: the dominant axis wins
+    if (!this.touchDragging) {
+      if (distance < JOYSTICK_DEAD_ZONE) {
+        return;
+      }
+      // Dragging steers and keeps firing; it replaces the tap's drive-to
+      this.touchDragging = true;
+      this.tapDrive = null;
+      this.syncMouseDrive(null);
+      FIRE_CONTROLS.forEach((control) => this.input.pressVirtual(control));
+    }
+    if (distance > JOYSTICK_RADIUS) {
+      // The anchor trails the finger so direction changes stay responsive
+      const k = (distance - JOYSTICK_RADIUS) / distance;
+      this.touchOrigin.x += dx * k;
+      this.touchOrigin.y += dy * k;
+      dx = event.clientX - this.touchOrigin.x;
+      dy = event.clientY - this.touchOrigin.y;
+    }
+    // Four-way like the NES pad: the dominant axis wins
+    if (Math.abs(dx) > Math.abs(dy)) {
       this.setDirection(dx > 0 ? 'right' : 'left');
     } else {
       this.setDirection(dy > 0 ? 'down' : 'up');
     }
   };
 
-  private handleStickUp = (event: PointerEvent): void => {
-    if (event.pointerId === this.joystickPointer) {
-      this.joystickPointer = null;
-      this.joystick.hidden = true;
-      this.setDirection(null);
+  private handleTouchUp = (event: PointerEvent): void => {
+    if (event.pointerId !== this.touchPointer) {
+      this.handleFireUp(event);
+      return;
     }
+    this.endTouchDrag();
   };
+
+  private endTouchDrag(): void {
+    if (this.touchDragging && this.firePointers.size === 0) {
+      FIRE_CONTROLS.forEach((control) => this.input.releaseVirtual(control));
+    }
+    this.touchPointer = null;
+    this.touchDragging = false;
+    this.setDirection(null);
+  }
 
   private setDirection(direction: Direction | null): void {
     if (direction === this.direction) {
@@ -464,7 +496,7 @@ export class AdaptiveControls {
     }
   }
 
-  // --- Touch: fire zone ----------------------------------------------------
+  // --- Touch: second-finger fire -------------------------------------------
 
   private handleFireDown = (event: PointerEvent): void => {
     event.preventDefault();
@@ -486,9 +518,8 @@ export class AdaptiveControls {
   // --- Releasing -----------------------------------------------------------
 
   private releaseTouch(): void {
-    this.joystickPointer = null;
-    this.joystick.hidden = true;
-    this.setDirection(null);
+    this.endTouchDrag();
+    this.tapDrive = null;
     if (this.firePointers.size > 0) {
       this.firePointers.clear();
       FIRE_CONTROLS.forEach((control) => this.input.releaseVirtual(control));

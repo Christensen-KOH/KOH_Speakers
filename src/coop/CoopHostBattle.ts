@@ -137,7 +137,16 @@ export class CoopHostBattle {
     this.eventBus.enemyAllDied.addListener(() => this.stageCleared.notify(null));
   }
 
-  public update(updateArgs: GameUpdateArgs): void {
+  /** Every connected player has the Hub open: the shared battlefield holds still. */
+  public isSquadPaused(): boolean {
+    const active = this.roster.getSeats().filter((seat) => seat.disconnectedAt === null);
+    return active.length > 0 && active.every((seat) => seat.input.thinking);
+  }
+
+  public update(frameArgs: GameUpdateArgs): void {
+    const updateArgs = this.isSquadPaused()
+      ? { ...frameArgs, deltaTime: 0, realDeltaTime: frameArgs.deltaTime }
+      : frameArgs;
     const { collisionSystem } = updateArgs;
     this.scripts.forEach((script) => script.invokeUpdate(updateArgs));
     this.root.traverseDescedants((node) => node.invokeUpdate(updateArgs));

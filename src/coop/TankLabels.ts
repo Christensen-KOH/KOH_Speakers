@@ -36,15 +36,22 @@ const LABEL_OFFSET_Y = 44;
 export class TankLabels {
   private readonly layer = document.createElement('div');
   private readonly labels = new Map<string, LabelElements>();
+  private readonly badge = document.createElement('div');
 
   constructor(container: HTMLElement) {
     this.layer.className = 'tk-tags';
     this.layer.setAttribute('aria-hidden', 'true');
     container.append(this.layer);
+    this.badge.className = 'tk-pause-badge';
+    this.badge.textContent = '⏸️ Paused — Answering Questions';
+    this.badge.hidden = true;
+    container.append(this.badge);
   }
 
   public update(labels: TankLabel[]): void {
     const seen = new Set<string>();
+    // Everyone has the Hub open: the host freezes the battlefield
+    this.badge.hidden = !(labels.length > 0 && labels.every((label) => label.thinking));
 
     labels.forEach((label) => {
       seen.add(label.id);
@@ -90,6 +97,7 @@ export class TankLabels {
 
   public destroy(): void {
     this.layer.remove();
+    this.badge.remove();
     this.labels.clear();
   }
 

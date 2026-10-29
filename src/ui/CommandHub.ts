@@ -57,9 +57,38 @@ export class CommandHub {
     this.strip.append(this.questionsTab, this.shopTab);
     container.append(this.strip);
 
+    this.trackKeyboard();
+
     hud.hubRequested.addListener((playerIndex) => this.toggle(playerIndex));
     // Controllers acquire the gate just before their panel opens.
     gate.changed.addListener(() => window.setTimeout(() => this.refresh(), 0));
+  }
+
+  /**
+   * Mobile soft keyboard: freeze the stage at its full height and pin the
+   * question sheet to the visible top (hub.css), so the prompt, input and
+   * Submit button are never covered.
+   */
+  private trackKeyboard(): void {
+    const viewport = window.visualViewport;
+    if (!viewport) {
+      return;
+    }
+    const root = document.documentElement;
+    let fullHeight = window.innerHeight;
+    const sync = (): void => {
+      const keyboard = viewport.height < fullHeight * 0.75;
+      if (!keyboard) {
+        fullHeight = Math.max(window.innerHeight, viewport.height);
+      }
+      root.classList.toggle('tk-kb-open', keyboard);
+      root.style.setProperty('--tk-full-h', `${fullHeight}px`);
+      root.style.setProperty('--tk-vv-top', `${viewport.offsetTop}px`);
+      root.style.setProperty('--tk-vv-h', `${viewport.height}px`);
+    };
+    viewport.addEventListener('resize', sync);
+    viewport.addEventListener('scroll', sync);
+    sync();
   }
 
   public toggle(playerIndex = 0): void {
@@ -107,6 +136,8 @@ export class CommandHub {
       this.lastTab = 'shop';
     }
     this.strip.hidden = !(questionsOpen || shopOpen);
+    // Hides name tags and alerts that would bleed over the Hub (hub.css)
+    document.documentElement.classList.toggle('tk-hub-open', questionsOpen || shopOpen);
     this.questionsTab.classList.toggle('is-active', questionsOpen);
     this.shopTab.classList.toggle('is-active', shopOpen);
   }

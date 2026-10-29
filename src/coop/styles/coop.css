@@ -97,3 +97,20 @@
 }
 
 .tk-coop-connecting[hidden] { display: none; }
+
+/* Whole squad has the Hub open: the shared battlefield is frozen. */
+.tk-pause-badge {
+  position: absolute;
+  top: 1.5cqh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  padding: 0.5em 1.2em;
+  border-radius: 999px;
+  background: rgba(10, 14, 23, 0.85);
+  color: #ffcf3d;
+  font: 800 2cqh var(--tk-font);
+  pointer-events: none;
+}
+
+.tk-pause-badge[hidden] { display: none; }

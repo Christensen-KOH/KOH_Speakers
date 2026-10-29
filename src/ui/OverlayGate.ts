@@ -1,10 +1,8 @@
 import { Subject } from '../core/Subject';
 import type { InputManager } from '../input';
 
-// Game speed while an overlay is open: bullet-time in the open field, full
-// stop while parked on a pad (the safe zones).
-const TIME_SCALE_OPEN = 0.2;
-const TIME_SCALE_SAFE_ZONE = 0;
+// Game speed while an overlay is open: a full stop.
+const TIME_SCALE_OPEN = 0;
 
 export interface LevelOverlayContext {
   // False while paused, during intro/game over, etc.
@@ -100,8 +98,7 @@ export class OverlayGate {
     if (this.owner === null || this.level === null) {
       return 1;
     }
-    return this.level.isInSafeZone(this.ownerPlayer)
-      ? TIME_SCALE_SAFE_ZONE
-      : TIME_SCALE_OPEN;
+    // Hub open: the whole battlefield freezes, anywhere on the map
+    return TIME_SCALE_OPEN;
   }
 }
