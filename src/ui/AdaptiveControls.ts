@@ -44,8 +44,6 @@ const ROTATION_DIRECTIONS: Record<Rotation, Direction> = {
 const MOUSE_DRAG_DISTANCE = 8;
 // The tank is "there" once the cursor is this close on both axes (field px).
 const MOUSE_ARRIVE_DISTANCE = 12;
-// A tap farther than 1.5 tiles from the tank drives there (field px).
-const TAP_DRIVE_DISTANCE = config.TILE_SIZE_LARGE * 1.5;
 
 // Full-screen DOM panels bring their own buttons.
 // The host's compact card counts too: the teacher's screen needs no pad.
@@ -88,8 +86,9 @@ function isTypingTarget(target: EventTarget | null): boolean {
  *   the playfield turns toward the cursor and fires, holding right-click (or
  *   left-click + drag) drives toward the cursor, middle-click / side buttons
  *   (or Tab/Q) toggle the Command Hub.
- * - Touch: tap the map to turn and fire (far taps drive there), drag to steer
- *   while firing, a second finger fires. No on-screen stick. The Hub button lives in the HUD.
+ * - Touch: the map only drives (tap a tile to drive there, hold or drag to
+ *   steer); the floating 🔥 button in the bottom-right corner is the only
+ *   way to fire, so steering never wastes shells. The Hub button lives in the HUD.
  *
  * Movement and fire go through the input manager as virtual keys, so menus,
  * rebinding and gameplay need no special cases. Aimed shots are published
@@ -101,6 +100,8 @@ export class AdaptiveControls {
   public readonly modeChanged = new Subject<ControlMode>();
   // Middle-click or a mouse side button: open/close the Command Hub.
   public readonly hubToggleRequested = new Subject<void>();
+  // Touch: the 🔥 button went down.
+  public readonly firePressed = new Subject<void>();
 
   private readonly input: InputManager;
   private readonly gate: OverlayGate;
@@ -112,6 +113,7 @@ export class AdaptiveControls {
 
   private readonly zones = el('div', 'tk-tz');
   private readonly surface = el('div', 'tk-tz-half');
+  private readonly fireButton = el('button', 'tk-fire-btn', '🔥');
 
   private touchPointer: number | null = null;
   private touchOrigin = { x: 0, y: 0 };
@@ -119,8 +121,8 @@ export class AdaptiveControls {
   // Finger held on the map: the tank keeps steering toward it
   private touchHold = false;
   private touchClient = { x: 0, y: 0 };
-  // Tap on a far tile: drive there ('pending' until the distance is known)
-  private tapDrive: 'pending' | 'on' | null = null;
+  // Tapped a tile: drive there until the tank arrives
+  private tapDrive = false;
   private direction: Direction | null = null;
   private readonly firePointers = new Set<number>();
   private readonly heldKeys = new Map<string, InputControl[]>();
@@ -149,16 +151,23 @@ export class AdaptiveControls {
     this.uiLayer = uiLayer;
 
     // --- Touch layer ---
-    // One invisible surface over the battlefield: tap to aim/fire/drive,
-    // drag to steer, a second finger fires. No on-screen stick.
+    // One invisible surface over the battlefield that only drives (tap a
+    // tile, hold or drag to steer), plus a floating fire button.
     this.zones.setAttribute('aria-hidden', 'true');
-    this.zones.append(this.surface);
+    this.fireButton.type = 'button';
+    this.fireButton.tabIndex = -1;
+    this.zones.append(this.surface, this.fireButton);
 
     this.surface.addEventListener('pointerdown', this.handleTouchDown);
     this.surface.addEventListener('pointermove', this.handleTouchMove);
     this.surface.addEventListener('pointerup', this.handleTouchUp);
     this.surface.addEventListener('pointercancel', this.handleTouchUp);
     this.surface.addEventListener('contextmenu', (event) => event.preventDefault());
+    this.fireButton.addEventListener('pointerdown', this.handleFireDown);
+    this.fireButton.addEventListener('pointerup', this.handleFireUp);
+    this.fireButton.addEventListener('pointercancel', this.handleFireUp);
+    this.fireButton.addEventListener('lostpointercapture', this.handleFireUp);
+    this.fireButton.addEventListener('contextmenu', (event) => event.preventDefault());
 
     document.body.append(this.zones);
 
@@ -340,7 +349,7 @@ export class AdaptiveControls {
   /** True while right-click is held, or left-click is held and dragged. */
   public isMouseDriving(): boolean {
     return (
-      (this.rightHeld || this.leftDragging || this.touchHold || this.tapDrive !== null) &&
+      (this.rightHeld || this.leftDragging || this.touchHold || this.tapDrive) &&
       this.gate.isFree()
     );
   }
@@ -377,12 +386,8 @@ export class AdaptiveControls {
     const dy = this.mouse.y - center.y;
     const ax = Math.abs(dx);
     const ay = Math.abs(dy);
-    if (this.tapDrive === 'pending') {
-      // Near taps only turn and fire; far taps drive
-      this.tapDrive = Math.hypot(dx, dy) > TAP_DRIVE_DISTANCE ? 'on' : null;
-    }
     if (ax < MOUSE_ARRIVE_DISTANCE && ay < MOUSE_ARRIVE_DISTANCE) {
-      this.tapDrive = null;
+      this.tapDrive = false;
       return -1;
     }
     const horizontal = ax >= ay ? ax >= MOUSE_ARRIVE_DISTANCE : ay < MOUSE_ARRIVE_DISTANCE;
@@ -415,18 +420,17 @@ export class AdaptiveControls {
     this.rightHeld = false;
     this.leftAnchor = null;
     this.leftDragging = false;
-    this.tapDrive = null;
+    this.tapDrive = false;
     this.touchHold = false;
     this.syncMouseDrive(null);
   }
 
-  // --- Touch: tap / drag on the battlefield ---------------------------------
+  // --- Touch: tap / drag on the battlefield (drive only, never fires) -------
 
   private handleTouchDown = (event: PointerEvent): void => {
     event.preventDefault();
     if (this.touchPointer !== null) {
-      // A second finger fires
-      this.handleFireDown(event);
+      // The first finger keeps steering
       return;
     }
     this.touchPointer = event.pointerId;
@@ -439,13 +443,11 @@ export class AdaptiveControls {
     this.touchClient = { x: event.clientX, y: event.clientY };
     this.touchHold = true;
     this.touchDragging = false;
-    // Tap: turn toward the tile and fire; far taps also drive there
+    // Tap: drive to the tile (no shot)
     const point = this.toFieldPoint(event);
     if (point !== null) {
       this.mouse = point;
-      this.mouseMoved = true;
-      this.tapDrive = 'pending';
-      this.aimFire.notify(point);
+      this.tapDrive = true;
     }
   };
 
@@ -460,25 +462,20 @@ export class AdaptiveControls {
       Math.hypot(event.clientX - this.touchOrigin.x, event.clientY - this.touchOrigin.y) >=
         JOYSTICK_DEAD_ZONE
     ) {
-      // Moving the finger while holding also keeps firing
+      // Dragging steers toward the finger while it is held
       this.touchDragging = true;
-      this.tapDrive = null;
-      FIRE_CONTROLS.forEach((control) => this.input.pressVirtual(control));
+      this.tapDrive = false;
     }
   };
 
   private handleTouchUp = (event: PointerEvent): void => {
     if (event.pointerId !== this.touchPointer) {
-      this.handleFireUp(event);
       return;
     }
     this.endTouchDrag();
   };
 
   private endTouchDrag(): void {
-    if (this.touchDragging && this.firePointers.size === 0) {
-      FIRE_CONTROLS.forEach((control) => this.input.releaseVirtual(control));
-    }
     this.touchPointer = null;
     this.touchHold = false;
     this.touchDragging = false;
@@ -499,12 +496,15 @@ export class AdaptiveControls {
     }
   }
 
-  // --- Touch: second-finger fire -------------------------------------------
+  // --- Touch: the 🔥 button --------------------------------------------------
 
   private handleFireDown = (event: PointerEvent): void => {
     event.preventDefault();
     if (this.firePointers.size === 0) {
       FIRE_CONTROLS.forEach((control) => this.input.pressVirtual(control));
+      this.fireButton.classList.add('is-down');
+      navigator.vibrate?.(8);
+      this.firePressed.notify(null);
     }
     this.firePointers.add(event.pointerId);
   };
@@ -515,6 +515,7 @@ export class AdaptiveControls {
     }
     if (this.firePointers.size === 0) {
       FIRE_CONTROLS.forEach((control) => this.input.releaseVirtual(control));
+      this.fireButton.classList.remove('is-down');
     }
   };
 
@@ -522,10 +523,11 @@ export class AdaptiveControls {
 
   private releaseTouch(): void {
     this.endTouchDrag();
-    this.tapDrive = null;
+    this.tapDrive = false;
     if (this.firePointers.size > 0) {
       this.firePointers.clear();
       FIRE_CONTROLS.forEach((control) => this.input.releaseVirtual(control));
+      this.fireButton.classList.remove('is-down');
     }
   }
 

@@ -181,3 +181,40 @@
 }
 
 .tk-hud-hub:hover { background: rgba(255, 207, 61, 0.3); }
+
+/* Touch battles: a slim see-through header over the full-screen map, with
+   room on the right for the top bar's buttons. */
+.tk-has-touch .tk-hud-hub-keys { display: none; }
+
+.tk-fullmap .tk-hud {
+  top: 0;
+  left: 0;
+  right: 0;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 44px;
+  padding: calc(4px + env(safe-area-inset-top)) 104px 10px calc(8px + env(safe-area-inset-left));
+  box-sizing: border-box;
+  font-size: clamp(13px, 3.6vw, 17px);
+  background: linear-gradient(rgba(10, 14, 23, 0.7), rgba(10, 14, 23, 0));
+}
+
+.tk-fullmap .tk-hud-group { gap: 0.45em; }
+.tk-fullmap .tk-hud-cash { min-width: 2.6em; }
+.tk-fullmap .tk-hud-fuel-bar { width: 2.8em; }
+
+.tk-fullmap .tk-hud-hub {
+  padding: 0.35em 0.9em;
+  background: rgba(255, 207, 61, 0.9);
+  border-color: transparent;
+  color: #1a1d33;
+}
+
+.tk-fullmap .tk-hud-alert,
+.tk-fullmap .tk-hud-toast {
+  font-size: clamp(13px, 3.6vw, 17px);
+}
+
+.tk-fullmap .tk-hud-alert { top: calc(56px + env(safe-area-inset-top)); }
+.tk-fullmap .tk-hud-toast { top: calc(96px + env(safe-area-inset-top)); }

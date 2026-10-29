@@ -19,9 +19,9 @@ interface Spark {
   color: string;
 }
 
-// Touch screens zoom in on the player; desktop keeps the whole arena in view.
-const ZOOM_PORTRAIT = 1.7;
-const ZOOM_LANDSCAPE = 1.4;
+// Touch screens: the battlefield covers the whole viewport (Gimkit-style)
+// and scrolls with the player; desktop keeps the whole arena in view.
+export const FULLMAP_CLASS = 'tk-fullmap';
 // Camera catches up with the tank at roughly this rate (per second).
 const FOLLOW_RATE = 6;
 const SPARK_LIFE = 0.4;
@@ -33,6 +33,10 @@ const MAX_SPARKS = 60;
  * the spark layer share one CSS transform, so everything stays aligned while
  * the world scrolls; pointer input is mapped back through `clientToCanvas`.
  * Also draws an exhaust spark trail behind the moving player tank.
+ *
+ * On touch screens the battle goes full-screen (`tk-fullmap` on <html>): the
+ * stage fills the viewport and the canvas is scaled to cover it, keeping its
+ * aspect ratio, so the camera always has map to scroll in both directions.
  */
 class BattleCamera {
   private stage: HTMLElement | null = null;
@@ -45,7 +49,11 @@ class BattleCamera {
   // Camera centre in canvas px.
   private cx = config.CANVAS_WIDTH / 2;
   private cy = config.CANVAS_HEIGHT / 2;
-  private zoom = 1;
+  private readonly zoom = 1;
+  // Displayed canvas size before zoom (CSS px); equals the stage unless full-screen.
+  private baseW = 0;
+  private baseH = 0;
+  private fullmap = false;
   private tx = 0;
   private ty = 0;
   private lastTime = 0;
@@ -74,9 +82,7 @@ class BattleCamera {
     const dt = this.lastTime === 0 ? 0.016 : Math.min(0.1, (now - this.lastTime) / 1000);
     this.lastTime = now;
 
-    const touch = document.documentElement.classList.contains(TOUCH_UI_CLASS);
-    const portrait = window.innerHeight >= window.innerWidth;
-    this.zoom = touch ? (portrait ? ZOOM_PORTRAIT : ZOOM_LANDSCAPE) : 1;
+    this.setFullmap(document.documentElement.classList.contains(TOUCH_UI_CLASS));
 
     const px = config.BORDER_LEFT_WIDTH + focus.x;
     const py = config.BORDER_TOP_BOTTOM_HEIGHT + focus.y;
@@ -98,7 +104,7 @@ class BattleCamera {
   public reset(): void {
     this.active = false;
     this.lastTime = 0;
-    this.zoom = 1;
+    this.setFullmap(false);
     this.sparks.length = 0;
     this.fxContext?.clearRect(0, 0, this.fx.width, this.fx.height);
     this.cx = config.CANVAS_WIDTH / 2;
@@ -115,12 +121,31 @@ class BattleCamera {
     if (rect.width === 0 || rect.height === 0) {
       return null;
     }
-    const scaledW = rect.width * this.zoom;
-    const scaledH = rect.height * this.zoom;
+    const scaledW = (this.baseW || rect.width) * this.zoom;
+    const scaledH = (this.baseH || rect.height) * this.zoom;
     return {
       x: ((clientX - rect.left - this.tx) / scaledW) * config.CANVAS_WIDTH,
       y: ((clientY - rect.top - this.ty) / scaledH) * config.CANVAS_HEIGHT,
     };
+  }
+
+  /** Canvas px -> position inside the UI layer (CSS px), through the camera. */
+  public canvasToLayer(x: number, y: number): { left: number; top: number } | null {
+    if (this.stage === null || this.baseW === 0) {
+      return null;
+    }
+    return {
+      left: this.tx + (x / config.CANVAS_WIDTH) * this.baseW * this.zoom,
+      top: this.ty + (y / config.CANVAS_HEIGHT) * this.baseH * this.zoom,
+    };
+  }
+
+  private setFullmap(fullmap: boolean): void {
+    if (fullmap === this.fullmap) {
+      return;
+    }
+    this.fullmap = fullmap;
+    document.documentElement.classList.toggle(FULLMAP_CLASS, fullmap);
   }
 
   private apply(): void {
@@ -130,11 +155,21 @@ class BattleCamera {
     const w = this.stage.clientWidth;
     const h = this.stage.clientHeight;
     const z = this.zoom;
-    this.tx = Math.min(0, Math.max(w - w * z, w / 2 - (this.cx / config.CANVAS_WIDTH) * w * z));
-    this.ty = Math.min(0, Math.max(h - h * z, h / 2 - (this.cy / config.CANVAS_HEIGHT) * h * z));
-    const transform =
-      z === 1 ? '' : `translate(${this.tx.toFixed(1)}px, ${this.ty.toFixed(1)}px) scale(${z})`;
-    const origin = z === 1 ? '' : '0 0';
+    // Full-screen: cover the viewport; otherwise the stage already has the canvas aspect.
+    const cover = this.fullmap ? Math.max(w / config.CANVAS_WIDTH, h / config.CANVAS_HEIGHT) : 0;
+    this.baseW = this.fullmap ? config.CANVAS_WIDTH * cover : w;
+    this.baseH = this.fullmap ? config.CANVAS_HEIGHT * cover : h;
+    const sw = this.baseW * z;
+    const sh = this.baseH * z;
+    this.tx = Math.min(0, Math.max(w - sw, w / 2 - (this.cx / config.CANVAS_WIDTH) * sw));
+    this.ty = Math.min(0, Math.max(h - sh, h / 2 - (this.cy / config.CANVAS_HEIGHT) * sh));
+    const moved = this.fullmap || z !== 1;
+    const transform = moved
+      ? `translate(${this.tx.toFixed(1)}px, ${this.ty.toFixed(1)}px) scale(${z})`
+      : '';
+    const origin = moved ? '0 0' : '';
+    const width = this.fullmap ? `${this.baseW.toFixed(1)}px` : '';
+    const height = this.fullmap ? `${this.baseH.toFixed(1)}px` : '';
 
     const targets: HTMLElement[] = [this.canvas, this.fx];
     this.layer.querySelectorAll<HTMLElement>('.tk-tags').forEach((node) => targets.push(node));
@@ -142,6 +177,10 @@ class BattleCamera {
       if (node.style.transform !== transform) {
         node.style.transform = transform;
         node.style.transformOrigin = origin;
+      }
+      if (node.style.width !== width) {
+        node.style.width = width;
+        node.style.height = height;
       }
     });
   }

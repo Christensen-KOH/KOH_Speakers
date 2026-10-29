@@ -73,50 +73,42 @@
   }
 }
 
-/* Portrait touch phones: battlefield edge-to-edge under the top bar, the rest
-   of the screen is the Quick Dashboard Dock (no dead space). */
-.tk-dock { display: none; }
+/* Touch battles (tk-fullmap, set by the camera): Gimkit-style, the battlefield
+   covers the whole screen and everything else floats over it. The canvas is
+   sized and scrolled by Camera.ts. */
+.tk-fullmap .tk-stage {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  width: 100dvw;
+  height: 100dvh;
+  max-width: none;
+  margin: 0;
+}
 
-@media (max-aspect-ratio: 1/1) {
-  .tk-has-touch .tk-stage {
-    margin-block: 0 auto;
-  }
+.tk-fullmap.tk-kb-open .tk-stage {
+  height: var(--tk-full-h, 100dvh);
+}
 
-  .tk-has-touch .tk-ui-layer > .tk-dock:not([hidden]) {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    top: calc(var(--tk-topbar-h, 48px) + 100dvw * 896 / 1024);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-evenly;
-    gap: 10px;
-    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
-    box-sizing: border-box;
-    background: #0a0e17;
-    pointer-events: auto;
-  }
+/* HUD buttons sit above the touch surface; empty space lets touches through */
+.tk-fullmap .tk-ui-layer {
+  z-index: 11;
+}
 
-  .tk-dock-status {
-    text-align: center;
-    color: #e8ecf8;
-    font: 800 clamp(14px, 4.2vw, 20px) var(--tk-font, system-ui, sans-serif);
-    white-space: pre;
-  }
+/* The Hub sheet covers the top bar too */
+.tk-fullmap.tk-hub-open .tk-ui-layer {
+  z-index: 9999;
+}
 
-  .tk-dock-buttons { display: flex; gap: 12px; flex: 1; max-height: 140px; }
-
-  .tk-dock-btn {
-    flex: 2;
-    border: 0;
-    border-radius: 16px;
-    background: #ffcf3d;
-    color: #1a1d33;
-    font: 900 clamp(16px, 5vw, 24px) var(--tk-font, system-ui, sans-serif);
-  }
-
-  .tk-dock-btn.is-shop { flex: 1; background: #19c37d; color: #04281a; }
+.tk-fullmap .tk-topbar {
+  position: fixed;
+  top: env(safe-area-inset-top);
+  right: env(safe-area-inset-right);
+  width: auto;
+  height: 44px;
+  background: transparent;
 }
 
 /* Exhaust sparks: same box as the canvas, shares the camera transform */
@@ -127,23 +119,4 @@
   height: 100%;
   pointer-events: none;
   image-rendering: pixelated;
-}
-
-@media (max-aspect-ratio: 1/1) {
-  /* Frosted dock with the status pill right above the action buttons */
-  .tk-has-touch .tk-ui-layer > .tk-dock:not([hidden]) {
-    background: rgba(26, 28, 46, 0.92);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
-  }
-
-  .tk-dock-status {
-    align-self: center;
-    padding: 6px 16px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .tk-dock-btn.is-shop { flex: 2; }
 }

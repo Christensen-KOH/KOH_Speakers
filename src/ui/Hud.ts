@@ -59,18 +59,18 @@ interface PlayerWidgets {
 export class Hud {
   // The player clicked the "⚡ Hub" button.
   public readonly hubRequested = new Subject<number>();
-  // Portrait dock buttons: open the Hub straight on a tab.
-  public readonly hubTabRequested = new Subject<{ tab: 'questions' | 'shop'; player: number }>();
+  // Player 1 just ran out of shells or fuel.
+  public readonly resourcesEmptied = new Subject<void>();
   private readonly container: HTMLElement;
   private readonly bar = el('div', 'tk-hud');
   private readonly wave = el('div', 'tk-hud-wave tk-glass');
   private readonly timer = el('div', 'tk-hud-wave tk-hud-timer tk-glass');
   private readonly alert = el('div', 'tk-hud-alert');
   private readonly toastEl = el('div', 'tk-hud-toast tk-glass');
-  // Portrait phones: thumb-friendly dock under the battlefield (CSS-gated).
-  private readonly dock = el('div', 'tk-dock');
-  private readonly dockStatus = el('div', 'tk-dock-status');
   private players: PlayerWidgets[] = [];
+  // Player 1's last shells / fuel, to notice them running out.
+  private lastShells = -1;
+  private lastFuel = -1;
   private toastTimer: number = null;
 
   constructor(container: HTMLElement) {
@@ -79,17 +79,7 @@ export class Hud {
     this.alert.hidden = true;
     this.toastEl.hidden = true;
     this.alert.setAttribute('role', 'status');
-    this.dock.hidden = true;
-    const answer = el('button', 'tk-dock-btn', '⚡ Answer Questions');
-    const shop = el('button', 'tk-dock-btn is-shop', '🛒 Shop & Upgrades');
-    answer.type = 'button';
-    shop.type = 'button';
-    answer.addEventListener('click', () => this.hubTabRequested.notify({ tab: 'questions', player: 0 }));
-    shop.addEventListener('click', () => this.hubTabRequested.notify({ tab: 'shop', player: 0 }));
-    const buttons = el('div', 'tk-dock-buttons');
-    buttons.append(answer, shop);
-    this.dock.append(this.dockStatus, buttons);
-    container.append(this.bar, this.alert, this.toastEl, this.dock);
+    container.append(this.bar, this.alert, this.toastEl);
   }
 
   public show(playerCount: number): void {
@@ -109,13 +99,13 @@ export class Hud {
     this.wave.hidden = true;
     this.timer.hidden = true;
     this.bar.hidden = false;
-    this.dock.hidden = false;
+    this.lastShells = -1;
+    this.lastFuel = -1;
   }
 
   public hide(): void {
     battleCamera.reset();
     this.bar.hidden = true;
-    this.dock.hidden = true;
     this.alert.hidden = true;
     this.toastEl.hidden = true;
   }
@@ -145,10 +135,13 @@ export class Hud {
     }
 
     if (playerIndex === 0) {
-      setText(
-        this.dockStatus,
-        `$${state.cash}   ●${state.shells} shells   ⛽${Math.round(Math.max(0, Math.min(1, state.fuel)) * 100)}%${state.hearts > 1 ? `   🛡 ${state.hearts}` : ''}`,
-      );
+      const emptied =
+        (state.shells === 0 && this.lastShells > 0) || (state.fuel <= 0 && this.lastFuel > 0);
+      this.lastShells = state.shells;
+      this.lastFuel = state.fuel;
+      if (emptied) {
+        this.resourcesEmptied.notify(null);
+      }
     }
     setText(widgets.cash, `$${state.cash}`);
     setText(widgets.shells, `● ${state.shells}`);
@@ -167,6 +160,11 @@ export class Hud {
       widgets.hearts,
       state.hearts > 5 ? `❤ ${state.hearts}` : state.hearts > 1 ? '❤'.repeat(state.hearts) : '',
     );
+  }
+
+  /** True when player 1 has no shells left. */
+  public isOutOfShells(): boolean {
+    return this.lastShells === 0;
   }
 
   /** Persistent warning under the HUD; null clears it. */
@@ -190,8 +188,16 @@ export class Hud {
 
   /** Floating text over a point on the playfield (field coordinates). */
   public popupAtField(x: number, y: number, text: string, kind: PopupKind): void {
-    const left = ((config.BORDER_LEFT_WIDTH + x) / config.CANVAS_WIDTH) * 100;
-    const top = ((config.BORDER_TOP_BOTTOM_HEIGHT + y) / config.CANVAS_HEIGHT) * 100;
+    const canvasX = config.BORDER_LEFT_WIDTH + x;
+    const canvasY = config.BORDER_TOP_BOTTOM_HEIGHT + y;
+    // Through the follow camera, so the popup sits on the tank
+    const point = battleCamera.canvasToLayer(canvasX, canvasY);
+    if (point !== null) {
+      this.spawnPopup(`${point.left}px`, `${point.top}px`, text, kind);
+      return;
+    }
+    const left = (canvasX / config.CANVAS_WIDTH) * 100;
+    const top = (canvasY / config.CANVAS_HEIGHT) * 100;
     this.spawnPopup(`${left}%`, `${top}%`, text, kind);
   }
 
@@ -249,7 +255,9 @@ export class Hud {
 
     group.append(cash, fuel, shells, streak, hearts);
 
-    const hub = el('button', 'tk-hud-hub', '⚡ Hub (Tab / Q)');
+    const hub = el('button', 'tk-hud-hub', '⚡ Hub');
+    // Keyboard hint, hidden on touch screens (hud.css)
+    hub.append(el('span', 'tk-hud-hub-keys', ' (Tab / Q)'));
     hub.type = 'button';
     hub.title = 'Answer questions and shop for upgrades';
     hub.addEventListener('click', () => {

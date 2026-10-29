@@ -149,6 +149,17 @@ const commandHub = new CommandHub(
 );
 // Middle-click / mouse side buttons open and close the Hub
 controls.hubToggleRequested.addListener(() => commandHub.toggle(0));
+// Touch: out of shells or fuel pops the Hub, as does 🔥 with no shells
+hud.resourcesEmptied.addListener(() => {
+  if (controls.getMode() === 'touch') {
+    commandHub.show(0);
+  }
+});
+controls.firePressed.addListener(() => {
+  if (hud.isOutOfShells()) {
+    commandHub.show(0);
+  }
+});
 
 // Teacher Studio: kits, flashcards and class rules, before a game starts
 const teacherStudio = new TeacherStudio({
