@@ -3,8 +3,10 @@ import { EconomySession, getKillBounty } from '../../gimkit-economy';
 import type { LiveSession } from '../../live';
 import { KNOCKOUT_BOUNTY, Match } from '../../match';
 import { TankDeathReason } from '../../tank';
+import { TankState } from '../../gameObjects';
 import { TerrainType } from '../../terrain';
 import type { Hud, OverlayGate, QuestionController, ShopController } from '../../ui';
+import { battleCamera } from '../../ui/Camera';
 import { QUESTION_KEY_LABELS } from '../../ui/overlayKeys';
 import { isTouchUi } from '../../ui/touchUi';
 
@@ -114,6 +116,11 @@ export class LevelEconomyScript extends LevelScript {
         streak: player.getStreak(),
         hearts: tank && tank.isAlive() ? tank.attributes.health : 0,
       });
+
+      if (index === 0 && tank && tank.isAlive()) {
+        const { x, y } = tank.getCenter();
+        battleCamera.follow({ x, y, rotation: tank.rotation, moving: tank.state === TankState.Moving });
+      }
 
       const who = playerCount > 1 ? `P${index + 1}: ` : '';
       const press =

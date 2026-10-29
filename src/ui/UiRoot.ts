@@ -1,3 +1,4 @@
+import { battleCamera } from './Camera';
 import { CanvasPointer } from './CanvasPointer';
 import { enterFullscreenOnFirstTouch } from './Fullscreen';
 import { TopBar } from './TopBar';
@@ -26,6 +27,7 @@ export class UiRoot {
     this.layer.className = 'tk-ui-layer';
 
     this.stage.append(canvas, this.layer);
+    battleCamera.attach(canvas, this.stage, this.layer);
 
     this.pointer = new CanvasPointer(canvas);
     enterFullscreenOnFirstTouch();

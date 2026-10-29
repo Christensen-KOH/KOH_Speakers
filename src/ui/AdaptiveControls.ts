@@ -4,6 +4,7 @@ import type { Session } from '../game/Session';
 import { InputControl, InputManager } from '../input';
 import * as config from '../config';
 
+import { battleCamera } from './Camera';
 import { OverlayGate } from './OverlayGate';
 import { QuestionController } from './QuestionController';
 import { TOUCH_UI_CLASS } from './touchUi';
@@ -115,6 +116,9 @@ export class AdaptiveControls {
   private touchPointer: number | null = null;
   private touchOrigin = { x: 0, y: 0 };
   private touchDragging = false;
+  // Finger held on the map: the tank keeps steering toward it
+  private touchHold = false;
+  private touchClient = { x: 0, y: 0 };
   // Tap on a far tile: drive there ('pending' until the distance is known)
   private tapDrive: 'pending' | 'on' | null = null;
   private direction: Direction | null = null;
@@ -255,15 +259,13 @@ export class AdaptiveControls {
   };
 
   private toFieldPoint(event: PointerEvent): FieldPoint | null {
-    const rect = this.stage.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) {
+    const canvasPoint = battleCamera.clientToCanvas(event.clientX, event.clientY);
+    if (canvasPoint === null) {
       return null;
     }
-    const canvasX = ((event.clientX - rect.left) / rect.width) * config.CANVAS_WIDTH;
-    const canvasY = ((event.clientY - rect.top) / rect.height) * config.CANVAS_HEIGHT;
     return {
-      x: canvasX - config.BORDER_LEFT_WIDTH,
-      y: canvasY - config.BORDER_TOP_BOTTOM_HEIGHT,
+      x: canvasPoint.x - config.BORDER_LEFT_WIDTH,
+      y: canvasPoint.y - config.BORDER_TOP_BOTTOM_HEIGHT,
     };
   }
 
@@ -337,7 +339,10 @@ export class AdaptiveControls {
 
   /** True while right-click is held, or left-click is held and dragged. */
   public isMouseDriving(): boolean {
-    return (this.rightHeld || this.leftDragging || this.tapDrive !== null) && this.gate.isFree();
+    return (
+      (this.rightHeld || this.leftDragging || this.touchHold || this.tapDrive !== null) &&
+      this.gate.isFree()
+    );
   }
 
   /** Cursor position on the battlefield (field coordinates), if it moved. */
@@ -357,6 +362,16 @@ export class AdaptiveControls {
   public getMouseDriveRotation(center: FieldPoint): number {
     if (!this.isMouseDriving() || this.mouse === null) {
       return -1;
+    }
+    if (this.touchHold) {
+      // The camera scrolls under a still finger: re-aim every frame
+      const held = battleCamera.clientToCanvas(this.touchClient.x, this.touchClient.y);
+      if (held !== null) {
+        this.mouse = {
+          x: held.x - config.BORDER_LEFT_WIDTH,
+          y: held.y - config.BORDER_TOP_BOTTOM_HEIGHT,
+        };
+      }
     }
     const dx = this.mouse.x - center.x;
     const dy = this.mouse.y - center.y;
@@ -401,6 +416,7 @@ export class AdaptiveControls {
     this.leftAnchor = null;
     this.leftDragging = false;
     this.tapDrive = null;
+    this.touchHold = false;
     this.syncMouseDrive(null);
   }
 
@@ -420,6 +436,8 @@ export class AdaptiveControls {
       // Release still arrives via pointerup/pointercancel
     }
     this.touchOrigin = { x: event.clientX, y: event.clientY };
+    this.touchClient = { x: event.clientX, y: event.clientY };
+    this.touchHold = true;
     this.touchDragging = false;
     // Tap: turn toward the tile and fire; far taps also drive there
     const point = this.toFieldPoint(event);
@@ -436,32 +454,16 @@ export class AdaptiveControls {
       return;
     }
     event.preventDefault();
-    let dx = event.clientX - this.touchOrigin.x;
-    let dy = event.clientY - this.touchOrigin.y;
-    const distance = Math.hypot(dx, dy);
-    if (!this.touchDragging) {
-      if (distance < JOYSTICK_DEAD_ZONE) {
-        return;
-      }
-      // Dragging steers and keeps firing; it replaces the tap's drive-to
+    this.touchClient = { x: event.clientX, y: event.clientY };
+    if (
+      !this.touchDragging &&
+      Math.hypot(event.clientX - this.touchOrigin.x, event.clientY - this.touchOrigin.y) >=
+        JOYSTICK_DEAD_ZONE
+    ) {
+      // Moving the finger while holding also keeps firing
       this.touchDragging = true;
       this.tapDrive = null;
-      this.syncMouseDrive(null);
       FIRE_CONTROLS.forEach((control) => this.input.pressVirtual(control));
-    }
-    if (distance > JOYSTICK_RADIUS) {
-      // The anchor trails the finger so direction changes stay responsive
-      const k = (distance - JOYSTICK_RADIUS) / distance;
-      this.touchOrigin.x += dx * k;
-      this.touchOrigin.y += dy * k;
-      dx = event.clientX - this.touchOrigin.x;
-      dy = event.clientY - this.touchOrigin.y;
-    }
-    // Four-way like the NES pad: the dominant axis wins
-    if (Math.abs(dx) > Math.abs(dy)) {
-      this.setDirection(dx > 0 ? 'right' : 'left');
-    } else {
-      this.setDirection(dy > 0 ? 'down' : 'up');
     }
   };
 
@@ -478,6 +480,7 @@ export class AdaptiveControls {
       FIRE_CONTROLS.forEach((control) => this.input.releaseVirtual(control));
     }
     this.touchPointer = null;
+    this.touchHold = false;
     this.touchDragging = false;
     this.setDirection(null);
   }

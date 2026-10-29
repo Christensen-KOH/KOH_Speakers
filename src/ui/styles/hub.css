@@ -18,8 +18,17 @@
    name tags / alerts stay out from under the question text and buttons. */
 .tk-ui-layer > .tk-qm,
 .tk-ui-layer > .tk-shop {
+  position: fixed;
+  inset: 0;
   z-index: 9999;
-  background: rgba(10, 14, 23, 0.96);
+  background: #1a1c2e;
+}
+
+/* A size-contained layer would trap the fixed full-screen sheet */
+.tk-ui-layer:has(> .tk-qm.is-open),
+.tk-ui-layer:has(> .tk-shop.is-open) {
+  container-type: normal;
+  overflow: visible;
 }
 
 .tk-ui-layer > .tk-hub-tabs {

@@ -1,6 +1,8 @@
 import * as config from '../config';
 import { Subject } from '../core/Subject';
 
+import { battleCamera } from './Camera';
+
 import './styles/hud.css';
 
 export interface HudPlayerState {
@@ -79,7 +81,7 @@ export class Hud {
     this.alert.setAttribute('role', 'status');
     this.dock.hidden = true;
     const answer = el('button', 'tk-dock-btn', '⚡ Answer Questions');
-    const shop = el('button', 'tk-dock-btn is-shop', '🛒 Shop');
+    const shop = el('button', 'tk-dock-btn is-shop', '🛒 Shop & Upgrades');
     answer.type = 'button';
     shop.type = 'button';
     answer.addEventListener('click', () => this.hubTabRequested.notify({ tab: 'questions', player: 0 }));
@@ -111,6 +113,7 @@ export class Hud {
   }
 
   public hide(): void {
+    battleCamera.reset();
     this.bar.hidden = true;
     this.dock.hidden = true;
     this.alert.hidden = true;

@@ -12,6 +12,7 @@ import { TankParty, TankType } from '../tank';
 import type { TankTier, TankVariant } from '../tank';
 import { TankAttributesFactory } from '../tank/TankAttributesFactory';
 import type { FieldPoint } from '../ui';
+import { battleCamera } from '../ui/Camera';
 import { QUESTION_KEY_LABELS } from '../ui/overlayKeys';
 import { isTouchUi } from '../ui/touchUi';
 
@@ -234,6 +235,10 @@ export class CoopLocalPlayer {
       streak: this.player.getStreak(),
       hearts: tank && tank.alive ? tank.hp : 0,
     });
+
+    if (tank && tank.alive) {
+      battleCamera.follow({ x: tank.x, y: tank.y, rotation: tank.r, moving: tank.moving });
+    }
 
     const remaining = liveSession.getRemainingMs();
     if (remaining !== null) {

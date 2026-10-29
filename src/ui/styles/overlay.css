@@ -9,6 +9,7 @@
     calc(100dvw * 896 / 1024)
   );
   max-width: 100dvw;
+  overflow: hidden;
   align-self: center;
   /* Centre in the space left under the top bar (portrait phones) */
   margin-block: auto;
@@ -116,4 +117,33 @@
   }
 
   .tk-dock-btn.is-shop { flex: 1; background: #19c37d; color: #04281a; }
+}
+
+/* Exhaust sparks: same box as the canvas, shares the camera transform */
+.tk-fx {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+@media (max-aspect-ratio: 1/1) {
+  /* Frosted dock with the status pill right above the action buttons */
+  .tk-has-touch .tk-ui-layer > .tk-dock:not([hidden]) {
+    background: rgba(26, 28, 46, 0.92);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .tk-dock-status {
+    align-self: center;
+    padding: 6px 16px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .tk-dock-btn.is-shop { flex: 2; }
 }
