@@ -201,6 +201,9 @@ session.started.addListener(() => {
     session.getPlayers().length,
   );
   questionController.startMatch();
+  // Host Options "Starting lives" (1, 3, 10 or unlimited)
+  const { startLives } = match.getSettings();
+  session.getPlayers().forEach((player) => player.setLives(startLives));
 });
 
 const inputHintSettings = new InputHintSettings(gameStorage);

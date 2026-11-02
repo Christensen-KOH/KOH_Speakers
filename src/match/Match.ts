@@ -79,9 +79,14 @@ export interface MatchSettings {
   startShells: number;
   startCash: number;
   rewardMultiplier: number;
+  // Lives per player; UNLIMITED_LIVES means respawns never run out.
+  startLives: number;
 }
 
 export const BLITZ_MINUTE_OPTIONS = [3, 5, 8];
+
+export const UNLIMITED_LIVES = 0;
+export const START_LIVES_OPTIONS = [1, 3, 10, UNLIMITED_LIVES];
 
 export const DEFAULT_MATCH_SETTINGS: MatchSettings = {
   mode: MatchMode.BaseDefense,
@@ -92,6 +97,7 @@ export const DEFAULT_MATCH_SETTINGS: MatchSettings = {
   startShells: DEFAULT_ECONOMY_SETTINGS.startShells,
   startCash: DEFAULT_ECONOMY_SETTINGS.startCash,
   rewardMultiplier: 1,
+  startLives: 3,
 };
 
 export const KNOCKOUT_BOUNTY = 50;
@@ -150,6 +156,9 @@ export function sanitizeSettings(raw: unknown): MatchSettings {
     startShells: clampNumber(data.startShells, 0, 99, DEFAULT_MATCH_SETTINGS.startShells),
     startCash: clampNumber(data.startCash, 0, 9999, DEFAULT_MATCH_SETTINGS.startCash),
     rewardMultiplier: clampNumber(data.rewardMultiplier, 0.5, 5, 1),
+    startLives: START_LIVES_OPTIONS.includes(data.startLives as number)
+      ? (data.startLives as number)
+      : DEFAULT_MATCH_SETTINGS.startLives,
   };
 }
 

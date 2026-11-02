@@ -20,6 +20,52 @@ export function readStickCodes(gamepad: Gamepad): number[] {
   return [y < 0 ? GamepadButtonCode.Up : GamepadButtonCode.Down];
 }
 
+// Hat-switch positions, clockwise from up, in steps of 2/7 from -1.
+const HAT_CODES: number[][] = [
+  [GamepadButtonCode.Up],
+  [GamepadButtonCode.Up, GamepadButtonCode.Right],
+  [GamepadButtonCode.Right],
+  [GamepadButtonCode.Down, GamepadButtonCode.Right],
+  [GamepadButtonCode.Down],
+  [GamepadButtonCode.Down, GamepadButtonCode.Left],
+  [GamepadButtonCode.Left],
+  [GamepadButtonCode.Up, GamepadButtonCode.Left],
+];
+
+/**
+ * D-pad as buttons 12-15. Pads the browser knows ("standard" mapping)
+ * report it as those buttons already; generic USB/Bluetooth pads often
+ * report it as a hat-switch axis (usually axis 9) instead.
+ */
+export function readDpadCodes(gamepad: Gamepad): number[] {
+  const codes = [
+    GamepadButtonCode.Up,
+    GamepadButtonCode.Down,
+    GamepadButtonCode.Left,
+    GamepadButtonCode.Right,
+  ].filter((code) => gamepad.buttons[code]?.pressed === true);
+  if (codes.length > 0 || gamepad.mapping === 'standard') {
+    return codes;
+  }
+  const hat = gamepad.axes[9];
+  // Centered hats rest outside [-1, 1]
+  if (hat === undefined || Math.abs(hat) > 1.05) {
+    return [];
+  }
+  return HAT_CODES[Math.round((hat + 1) * 3.5) % 8];
+}
+
+/** D-pad and left stick together (drive and menu directions). */
+export function readDirectionCodes(gamepad: Gamepad): number[] {
+  const codes = readDpadCodes(gamepad);
+  for (const code of readStickCodes(gamepad)) {
+    if (!codes.includes(code)) {
+      codes.push(code);
+    }
+  }
+  return codes;
+}
+
 export class GamepadInputDevice implements InputDevice {
   private deviceIndex: number;
   private isListening = false;
@@ -69,7 +115,7 @@ export class GamepadInputDevice implements InputDevice {
         codes.push(i);
       }
     }
-    for (const code of readStickCodes(gamepad)) {
+    for (const code of readDirectionCodes(gamepad)) {
       if (!codes.includes(code)) {
         codes.push(code);
       }
@@ -134,15 +180,13 @@ export class GamepadInputDevice implements InputDevice {
       return null;
     }
 
-    const gamepad = gamepads[this.deviceIndex];
+    // Device N is the Nth connected pad, not browser slot N: after a
+    // reconnect Chrome may put the only pad in slot 1 or 2.
+    // Chrome fills the array with nulls until a button is pressed.
+    const connected = Array.from(gamepads).filter(
+      (gamepad) => gamepad !== null && gamepad.connected,
+    );
 
-    // Chrome will have filled array of 4 elements with null values
-    // Value will be null after device is connected or page is reloaded,
-    // until user has pressed any button.
-    if (gamepad === null) {
-      return null;
-    }
-
-    return gamepad;
+    return connected[this.deviceIndex] ?? null;
   }
 }

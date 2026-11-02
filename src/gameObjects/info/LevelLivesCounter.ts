@@ -30,6 +30,11 @@ export class LevelLivesCounter extends GameObject {
   }
 
   public setCount(livesCount: number): void {
+    // Unlimited lives: the sprite font has no ∞, so show a dash pair
+    if (!Number.isFinite(livesCount)) {
+      this.livesText.setText('--');
+      return;
+    }
     const displayLivesCount = Math.max(0, livesCount - 1);
     this.livesText.setText(displayLivesCount.toString());
   }

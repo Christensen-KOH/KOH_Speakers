@@ -22,6 +22,22 @@
   image-rendering: pixelated;
 }
 
+/* Desktop / wide screens: no letterbox. The stage fills everything under
+   the top bar and the canvas stretches with it (crisp, unsmoothed pixels);
+   pointer input maps back through Camera.clientToCanvas on both axes. */
+@media (min-width: 768px) {
+  html:not(.tk-fullmap):not(.tk-kb-open) .tk-stage {
+    width: 100vw;
+    width: 100dvw;
+    height: calc(100vh - var(--tk-topbar-h, 48px));
+    height: calc(100dvh - var(--tk-topbar-h, 48px));
+    max-width: none;
+    /* UiRoot sets the canvas aspect ratio inline */
+    aspect-ratio: auto !important;
+    margin: 0;
+  }
+}
+
 /* Overlay sits above the canvas but lets clicks through except on widgets. */
 .tk-ui-layer {
   position: absolute;

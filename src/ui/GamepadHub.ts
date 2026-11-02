@@ -1,4 +1,4 @@
-import { GamepadButtonCode, readStickCodes } from '../core';
+import { GamepadButtonCode, readDirectionCodes } from '../core';
 
 import type { CommandHub } from './CommandHub';
 import type { OverlayGate } from './OverlayGate';
@@ -75,7 +75,7 @@ export class GamepadHub {
           pressed.add(code);
         }
       });
-      readStickCodes(gamepad).forEach((code) => pressed.add(code));
+      readDirectionCodes(gamepad).forEach((code) => pressed.add(code));
     }
     const justPressed = (code: number): boolean =>
       pressed.has(code) && !this.pressed.has(code);

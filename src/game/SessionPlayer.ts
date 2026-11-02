@@ -90,6 +90,15 @@ export class SessionPlayer {
     return this.lives;
   }
 
+  /** Starting lives for a new game; 0 means unlimited (never game over). */
+  public setLives(count: number): void {
+    this.lives = count > 0 ? count : Infinity;
+  }
+
+  public hasUnlimitedLives(): boolean {
+    return this.lives === Infinity;
+  }
+
   public isAlive(): boolean {
     return this.lives > 0;
   }

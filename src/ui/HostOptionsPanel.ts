@@ -3,6 +3,8 @@ import { RewardLevel } from '../gimkit-economy/EconomySettings';
 import { KitLibrary } from '../kits';
 import {
   BLITZ_MINUTE_OPTIONS,
+  START_LIVES_OPTIONS,
+  UNLIMITED_LIVES,
   getModeInfo,
   MATCH_MODES,
   MatchMode,
@@ -221,6 +223,25 @@ export class HostOptionsPanel {
       el('small', undefined, 'Off: driving is free; only shooting and upgrades need answers.'),
     );
 
+    // Starting lives
+    const livesField = el('div', 'tk-host-field');
+    livesField.append(
+      el('span', undefined, 'Starting lives'),
+      segmented(
+        'tk-host-lives',
+        START_LIVES_OPTIONS.map((lives) => [
+          lives,
+          lives === UNLIMITED_LIVES ? '∞ Unlimited' : String(lives),
+        ]),
+        this.settings.startLives,
+        (value) => {
+          this.settings.startLives = value;
+          this.refresh();
+        },
+      ),
+      el('small', undefined, 'Unlimited: tanks always respawn; only losing the base ends the game.'),
+    );
+
     // Shared cash (co-op)
     this.sharedCashField.append(
       el('span', undefined, 'Co-op cash'),
@@ -253,7 +274,7 @@ export class HostOptionsPanel {
       ),
     );
 
-    grid.append(kitField, rewardField, fuelField, this.sharedCashField, this.blitzField);
+    grid.append(kitField, rewardField, fuelField, livesField, this.sharedCashField, this.blitzField);
     section.append(grid);
     return section;
   }
