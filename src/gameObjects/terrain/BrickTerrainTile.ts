@@ -1,9 +1,11 @@
-import { BoxCollider, Sprite, SpritePainter } from '../../core';
+import { BoxCollider, Sprite } from '../../core';
 import { GameUpdateArgs, Tag } from '../../game';
 import { TerrainType } from '../../terrain';
 import * as config from '../../config';
 
 import { TerrainTile } from '../TerrainTile';
+
+import { BRICK_ELEVATION, ElevatedTilePainter } from './ElevatedTilePainter';
 
 // Movement collision tags are defined in BrickSuperTerrainTile.
 // Bullet collsion tags are defined here.
@@ -13,7 +15,8 @@ export class BrickTerrainTile extends TerrainTile {
   public collider = new BoxCollider(this);
   public zIndex = config.BRICK_TILE_Z_INDEX;
   public readonly tags = [Tag.Wall, Tag.Brick];
-  public readonly painter = new SpritePainter();
+  public readonly painter = new ElevatedTilePainter(BRICK_ELEVATION);
+  public ySort = true;
   protected sprites: Sprite[];
 
   constructor() {

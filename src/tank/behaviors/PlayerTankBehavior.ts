@@ -1,19 +1,18 @@
-import { GameUpdateArgs, Rotation } from '../../game';
+import { GameUpdateArgs } from '../../game';
 import { PlayerTank, TankState } from '../../gameObjects';
 import { LevelPlayInputContext } from '../../input';
+import { analogDrive } from '../../input/analogDrive';
 
 import { TankBehavior } from '../TankBehavior';
 
-const MOVE_CONTROLS = [
-  ...LevelPlayInputContext.MoveUp,
-  ...LevelPlayInputContext.MoveDown,
-  ...LevelPlayInputContext.MoveLeft,
-  ...LevelPlayInputContext.MoveRight,
-];
-
 export class PlayerTankBehavior extends TankBehavior {
+  public setup(tank: PlayerTank): void {
+    // Local players drive in 360° and slide around walls
+    tank.omni = true;
+  }
+
   public update(tank: PlayerTank, updateArgs: GameUpdateArgs): void {
-    const { deltaTime, inputManager, session } = updateArgs;
+    const { deltaTime, inputManager, overlayGate, session } = updateArgs;
 
     let inputMethod = inputManager.getActiveMethod();
 
@@ -37,29 +36,39 @@ export class PlayerTankBehavior extends TankBehavior {
       tank.fire();
     }
 
-    if (!tank.isSliding() && !tank.isStunned()) {
-      if (inputMethod.isHoldLastAny(LevelPlayInputContext.MoveUp)) {
-        tank.rotate(Rotation.Up);
-      }
-      if (inputMethod.isHoldLastAny(LevelPlayInputContext.MoveDown)) {
-        tank.rotate(Rotation.Down);
-      }
-      if (inputMethod.isHoldLastAny(LevelPlayInputContext.MoveLeft)) {
-        tank.rotate(Rotation.Left);
-      }
-      if (inputMethod.isHoldLastAny(LevelPlayInputContext.MoveRight)) {
-        tank.rotate(Rotation.Right);
-      }
-
-      if (inputMethod.isHoldAny(MOVE_CONTROLS)) {
-        tank.move(deltaTime);
-      }
+    if (tank.isSliding() || tank.isStunned()) {
+      return;
     }
 
-    if (
-      inputMethod.isNotHoldAll(MOVE_CONTROLS) &&
-      tank.state !== TankState.Idle
-    ) {
+    // Keys / D-pad: 8 directions (moveVector normalizes diagonals)
+    let dx = 0;
+    let dy = 0;
+    if (inputMethod.isHoldAny(LevelPlayInputContext.MoveLeft)) {
+      dx -= 1;
+    }
+    if (inputMethod.isHoldAny(LevelPlayInputContext.MoveRight)) {
+      dx += 1;
+    }
+    if (inputMethod.isHoldAny(LevelPlayInputContext.MoveUp)) {
+      dy -= 1;
+    }
+    if (inputMethod.isHoldAny(LevelPlayInputContext.MoveDown)) {
+      dy += 1;
+    }
+
+    // Stick, mouse or touch drive: any angle
+    const analog =
+      session.isMultiplayer() || (overlayGate && !overlayGate.isFree())
+        ? null
+        : analogDrive.get();
+    if (analog !== null) {
+      dx = analog.x;
+      dy = analog.y;
+    }
+
+    if (dx !== 0 || dy !== 0) {
+      tank.moveVector(dx, dy, deltaTime);
+    } else if (tank.state !== TankState.Idle) {
       tank.idle();
     }
   }

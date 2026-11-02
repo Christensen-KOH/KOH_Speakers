@@ -55,6 +55,19 @@ export class CanvasRenderContext extends RenderContext {
     this.context.fillRect(x, y, width, height);
   }
 
+  public fillEllipse(
+    centerX: number,
+    centerY: number,
+    radiusX: number,
+    radiusY: number,
+    color: string,
+  ): void {
+    this.context.fillStyle = color;
+    this.context.beginPath();
+    this.context.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
+    this.context.fill();
+  }
+
   public getGlobalAlpha(): number {
     return this.context.globalAlpha;
   }

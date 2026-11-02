@@ -118,6 +118,8 @@ class SpriteObject extends GameObject {
 }
 
 class ReplicaTank extends SpriteObject {
+  // Depth-sorted with the walls, like real tanks
+  public ySort = true;
   public readonly shield = new SpriteObject(TANK_SIZE, config.SHIELD_Z_INDEX);
   public frame = 1;
   public frameTime = 0;

@@ -26,6 +26,11 @@ export class RenderObject extends Transform {
   // camera. Inherited by children.
   public screenSpace = false;
 
+  // Depth-sorted with other `ySort` objects by bottom edge (3/4 top-down
+  // view): whatever stands lower on screen is drawn in front. Children that
+  // inherit this object's z-index sort with it.
+  public ySort = false;
+
   public canRender(): boolean {
     if (this.painter === null) {
       return false;

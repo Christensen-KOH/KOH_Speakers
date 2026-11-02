@@ -150,4 +150,10 @@ export class PlayerTank extends Tank {
       this.economy !== null ? this.economy.consumeMovement(deltaTime) : 1;
     super.move(deltaTime * speedFactor);
   }
+
+  public moveVector(dx: number, dy: number, deltaTime: number): void {
+    const speedFactor =
+      this.economy !== null ? this.economy.consumeMovement(deltaTime) : 1;
+    super.moveVector(dx, dy, deltaTime * speedFactor);
+  }
 }

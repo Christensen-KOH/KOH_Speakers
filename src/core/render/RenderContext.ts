@@ -30,6 +30,23 @@ export abstract class RenderContext {
   abstract getGlobalAlpha(): number;
   abstract setGlobalAlpha(alpha: number);
   abstract strokePath(positions: Vector[], color: string);
+
+  // Soft shadows; contexts without ellipses fall back to a rectangle.
+  public fillEllipse(
+    centerX: number,
+    centerY: number,
+    radiusX: number,
+    radiusY: number,
+    color: string,
+  ): void {
+    this.fillRect(
+      centerX - radiusX,
+      centerY - radiusY,
+      radiusX * 2,
+      radiusY * 2,
+      color,
+    );
+  }
   abstract strokeRect(
     x: number,
     y: number,

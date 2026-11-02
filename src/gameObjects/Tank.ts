@@ -27,6 +27,7 @@ import * as config from '../config';
 
 import { Bullet } from './Bullet';
 import { Shield } from './Shield';
+import { TankShadowPainter } from './TankShadowPainter';
 
 export enum TankState {
   Uninitialized,
@@ -55,6 +56,32 @@ enum TankCollisionResolution {
 
 const SKIN_LAYER_DESCRIPTIONS = [{ opacity: 1 }, { opacity: 0.5 }];
 const SNAP_SIZE = config.TILE_SIZE_MEDIUM;
+// Circle hitbox for free-driving tanks: a little inside the 64px sprite so
+// they fit 64px gaps and round corners instead of snagging on them.
+const CIRCLE_RADIUS = 30;
+const CIRCLE_PASSES = 3;
+// Keep facing the current side while the drive direction is within ~53° of it
+const FACING_KEEP_DOT = 0.6;
+
+const FACING_VECTORS: Record<number, [number, number]> = {
+  [Rotation.Up]: [0, -1],
+  [Rotation.Right]: [1, 0],
+  [Rotation.Down]: [0, 1],
+  [Rotation.Left]: [-1, 0],
+};
+
+// Side the sprite faces (and shoots toward) while driving along (dx, dy)
+function facingFor(dx: number, dy: number, current: Rotation): Rotation {
+  const length = Math.hypot(dx, dy);
+  const vector = FACING_VECTORS[current];
+  if (vector !== undefined && (vector[0] * dx + vector[1] * dy) / length > FACING_KEEP_DOT) {
+    return current;
+  }
+  if (Math.abs(dx) > Math.abs(dy)) {
+    return dx > 0 ? Rotation.Right : Rotation.Left;
+  }
+  return dy > 0 ? Rotation.Down : Rotation.Up;
+}
 
 const STUN_BLINK_DELAY = 0.1;
 // Sideways spacing between shells of a multi-shell volley (Scatter Shot).
@@ -63,6 +90,10 @@ const VOLLEY_SPACING = 22;
 export class Tank extends GameObject {
   public collider: SweptBoxCollider = new SweptBoxCollider(this, true);
   public tags = [Tag.Tank];
+  public ySort = true;
+  // Local players drive freely in 360° and slide around walls on a circle
+  // hitbox; everyone else keeps the classic grid-snapped movement.
+  public omni = false;
   // Tank index within it's party: players (0-1), enemies (0-19).
   public partyIndex = -1;
   public type: TankType;
@@ -122,6 +153,12 @@ export class Tank extends GameObject {
     collisionSystem.register(this.collider);
 
     this.behavior.setup(this, updateArgs);
+
+    // Floor shadow: same depth as the tank, added first so it is drawn first
+    const shadow = new GameObject();
+    shadow.size.copyFrom(this.size);
+    shadow.painter = new TankShadowPainter();
+    this.add(shadow);
 
     SKIN_LAYER_DESCRIPTIONS.forEach(() => {
       const layer = new GameObject();
@@ -332,6 +369,31 @@ export class Tank extends GameObject {
     this.updateMatrix(true);
   }
 
+  /**
+   * Free driving along (dx, dy) at full speed (any length, normalized here).
+   * The tank faces the nearest side, which picks its sprite and where it
+   * shoots.
+   */
+  public moveVector(dx: number, dy: number, deltaTime: number): void {
+    const length = Math.hypot(dx, dy);
+    if (length === 0) {
+      return;
+    }
+
+    if (this.state !== TankState.Moving) {
+      this.state = TankState.Moving;
+    }
+
+    const facing = facingFor(dx, dy, this.rotation as Rotation);
+    if (facing !== this.rotation) {
+      this.rotate(facing);
+    }
+
+    const distance = (this.attributes.moveSpeed * deltaTime) / length;
+    this.position.add(new Vector(dx * distance, dy * distance));
+    this.updateMatrix(true);
+  }
+
   public idle(checkIce = true): void {
     if (this.state !== TankState.Idle) {
       this.state = TankState.Idle;
@@ -355,7 +417,7 @@ export class Tank extends GameObject {
     // - simplify user navigation when moving into narrow passages; without it
     //   user will be stuck on corners
 
-    if (rotation !== this.rotation) {
+    if (rotation !== this.rotation && !this.omni) {
       if (rotation === Rotation.Up || rotation === Rotation.Down) {
         this.position.snapX(SNAP_SIZE);
       } else if (rotation === Rotation.Left || rotation === Rotation.Right) {
@@ -492,6 +554,11 @@ export class Tank extends GameObject {
       return;
     }
 
+    if (this.omni) {
+      this.slideAroundWalls(wallContacts);
+      return;
+    }
+
     // Find closest wall we are colliding with. It solves "tunneling" problem
     // if tank is going too fast it can jump over some small tiles of walls.
     // By using swept box collider and then finding closest points of contact,
@@ -514,6 +581,72 @@ export class Tank extends GameObject {
     const otherCurrentBox = firstWallContact.collider.getCurrentBox();
 
     this.resolveMinkowski(otherCurrentBox, true);
+  }
+
+  /**
+   * Circle-vs-box push-out: the tank's round hitbox is moved out of every
+   * wall along the shortest way, so brushing a wall or corner at an angle
+   * slides along it instead of stopping dead.
+   */
+  protected slideAroundWalls(wallContacts: CollisionContact[]): void {
+    const start = this.collider.getCurrentBox().getCenter();
+    let cx = start.x;
+    let cy = start.y;
+    const radius = CIRCLE_RADIUS;
+
+    for (let pass = 0; pass < CIRCLE_PASSES; pass += 1) {
+      let pushed = false;
+
+      for (const contact of wallContacts) {
+        const box = contact.collider.getCurrentBox();
+        const nearestX = Math.min(box.max.x, Math.max(box.min.x, cx));
+        const nearestY = Math.min(box.max.y, Math.max(box.min.y, cy));
+        const dx = cx - nearestX;
+        const dy = cy - nearestY;
+        const distanceSq = dx * dx + dy * dy;
+
+        if (distanceSq >= radius * radius) {
+          continue;
+        }
+        pushed = true;
+
+        if (distanceSq > 0.0001) {
+          const distance = Math.sqrt(distanceSq);
+          const push = (radius - distance) / distance;
+          cx += dx * push;
+          cy += dy * push;
+          continue;
+        }
+
+        // Centre inside the box: leave through the nearest side
+        const left = cx - box.min.x + radius;
+        const right = box.max.x - cx + radius;
+        const up = cy - box.min.y + radius;
+        const down = box.max.y - cy + radius;
+        const shortest = Math.min(left, right, up, down);
+        if (shortest === left) {
+          cx -= left;
+        } else if (shortest === right) {
+          cx += right;
+        } else if (shortest === up) {
+          cy -= up;
+        } else {
+          cy += down;
+        }
+      }
+
+      if (!pushed) {
+        break;
+      }
+    }
+
+    if (cx === start.x && cy === start.y) {
+      return;
+    }
+
+    this.position.add(new Vector(cx - start.x, cy - start.y));
+    this.updateMatrix(true);
+    this.collider.update();
   }
 
   protected resolveMinkowski(otherBox: BoundingBox, shouldSnap = false): void {

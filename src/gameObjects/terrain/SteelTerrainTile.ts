@@ -1,16 +1,19 @@
-import { BoxCollider, SpritePainter } from '../../core';
+import { BoxCollider } from '../../core';
 import { GameUpdateArgs, Tag } from '../../game';
 import { TerrainType } from '../../terrain';
 import * as config from '../../config';
 
 import { TerrainTile } from '../TerrainTile';
 
+import { ElevatedTilePainter, STEEL_ELEVATION } from './ElevatedTilePainter';
+
 export class SteelTerrainTile extends TerrainTile {
   public type = TerrainType.Steel;
   public collider = new BoxCollider(this);
   public zIndex = config.STEEL_TILE_Z_INDEX;
   public tags = [Tag.Wall, Tag.Steel, Tag.BlockMove];
-  public painter = new SpritePainter();
+  public painter = new ElevatedTilePainter(STEEL_ELEVATION);
+  public ySort = true;
 
   constructor() {
     super(config.STEEL_TILE_SIZE, config.STEEL_TILE_SIZE);

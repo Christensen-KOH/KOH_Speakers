@@ -21,6 +21,15 @@ export interface RenderCamera {
   y: number;
 }
 
+// y-sorted objects share one depth layer above the floor (terrain z 0) and
+// below bullets, shields and explosions (z 3+).
+const Y_SORT_Z_INDEX = 1.5;
+
+interface SortKey {
+  z: number;
+  y: number;
+}
+
 export interface RenderView {
   // Canvas backing size in device pixels
   width: number;
@@ -29,19 +38,27 @@ export interface RenderView {
   world: RenderCamera;
   // Menus and on-screen notices (objects flagged `screenSpace`)
   screen: RenderCamera;
+  // World-space floor drawn before any object (visible area in world px)
+  drawWorldBackground?: (
+    context: NativeContext,
+    visible: { x: number; y: number; width: number; height: number },
+  ) => void;
   // Extra world-space drawing after the world layer (e.g. exhaust sparks)
   drawWorldFx?: (context: NativeContext) => void;
 }
 
 /**
  * Crisp 2D canvas renderer. The canvas fills the viewport and every frame is
- * redrawn: the world layer through a scrolling camera (ctx.translate by
- * -camera.x/-camera.y), culled to what is on screen, then the screen layer.
+ * redrawn: the floor, then the world layer through a scrolling camera
+ * (ctx.translate by -camera.x/-camera.y), culled to what is on screen and
+ * depth-sorted (z-index, then bottom y for `ySort` objects), then the screen
+ * layer.
  */
 export class GameRenderer {
   private readonly canvas: HTMLCanvasElement;
   private readonly options: GameRendererOptions;
   private readonly context: CanvasRenderContext;
+  private readonly sortKeys = new Map<RenderObject, SortKey>();
 
   constructor(options: GameRendererOptions = {}) {
     this.options = Object.assign({}, DEFAULT_OPTIONS, options);
@@ -70,7 +87,8 @@ export class GameRenderer {
 
     const worldObjects: RenderObject[] = [];
     const screenObjects: RenderObject[] = [];
-    this.collect(root, false, worldObjects, screenObjects);
+    this.sortKeys.clear();
+    this.collect(root, false, null, worldObjects, screenObjects);
 
     const native = this.context.getNative();
     native.setTransform(1, 0, 0, 1, 0, 0);
@@ -82,6 +100,15 @@ export class GameRenderer {
     const minY = world.y;
     const maxX = world.x + view.width / world.zoom;
     const maxY = world.y + view.height / world.zoom;
+    if (view.drawWorldBackground !== undefined) {
+      view.drawWorldBackground(native, {
+        x: minX,
+        y: minY,
+        width: maxX - minX,
+        height: maxY - minY,
+      });
+    }
+
     const visible = worldObjects.filter((object) => {
       const box = object.getWorldBoundingBox();
       return box.max.x >= minX && box.min.x <= maxX && box.max.y >= minY && box.min.y <= maxY;
@@ -107,6 +134,7 @@ export class GameRenderer {
   private collect(
     object: RenderObject,
     screenSpace: boolean,
+    ySortAnchor: RenderObject | null,
     worldObjects: RenderObject[],
     screenObjects: RenderObject[],
   ): void {
@@ -119,17 +147,39 @@ export class GameRenderer {
 
     for (const child of object.children) {
       const childScreen = screenSpace || child.screenSpace;
+      // Children of a y-sorted object follow it unless they set their own z
+      let anchor: RenderObject | null = child.ySort ? child : null;
+      if (
+        anchor === null &&
+        ySortAnchor !== null &&
+        child.getWorldZIndex() === ySortAnchor.getWorldZIndex()
+      ) {
+        anchor = ySortAnchor;
+      }
+
+      this.sortKeys.set(
+        child,
+        anchor !== null
+          ? { z: Y_SORT_Z_INDEX, y: anchor.getWorldBoundingBox().max.y }
+          : { z: child.getWorldZIndex(), y: 0 },
+      );
+
       if (childScreen) {
         screenObjects.push(child);
       } else {
         worldObjects.push(child);
       }
-      this.collect(child, childScreen, worldObjects, screenObjects);
+      this.collect(child, childScreen, anchor, worldObjects, screenObjects);
     }
   }
 
   private paintAll(objects: RenderObject[]): void {
-    objects.sort((a, b) => a.getWorldZIndex() - b.getWorldZIndex());
+    const keys = this.sortKeys;
+    objects.sort((a, b) => {
+      const ka = keys.get(a);
+      const kb = keys.get(b);
+      return ka.z - kb.z || ka.y - kb.y;
+    });
     for (const object of objects) {
       this.renderObject(object);
     }

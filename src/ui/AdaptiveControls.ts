@@ -2,6 +2,7 @@ import { Subject } from '../core/Subject';
 import { Rotation } from '../game/Rotation';
 import type { Session } from '../game/Session';
 import { InputControl, InputManager } from '../input';
+import { analogDrive } from '../input/analogDrive';
 import * as config from '../config';
 
 import { battleCamera } from './Camera';
@@ -403,6 +404,13 @@ export class AdaptiveControls {
    */
   public syncMouseDrive(center: FieldPoint | null): void {
     const rotation = center === null ? -1 : this.getMouseDriveRotation(center);
+    // The tank drives straight at the cursor/finger (any angle); the held
+    // key below keeps everything else that reads the D-pad in step
+    analogDrive.setPointer(
+      rotation < 0 || this.mouse === null
+        ? null
+        : { x: this.mouse.x - center.x, y: this.mouse.y - center.y },
+    );
     const direction = rotation < 0 ? null : ROTATION_DIRECTIONS[rotation as Rotation];
     if (direction === this.mouseDirection) {
       return;

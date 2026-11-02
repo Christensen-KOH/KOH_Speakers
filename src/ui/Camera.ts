@@ -1,6 +1,7 @@
 import type { RenderCamera, RenderView } from '../core/GameRenderer';
 import * as config from '../config';
 
+import { drawArenaFloor } from './ArenaFloor';
 import { TOUCH_UI_CLASS } from './touchUi';
 
 export interface CameraFocus {
@@ -11,12 +12,16 @@ export interface CameraFocus {
   moving: boolean;
 }
 
-interface Spark {
+interface Particle {
   x: number;
   y: number;
   vx: number;
   vy: number;
   life: number;
+  maxLife: number;
+  // Radius at birth and at the end of its life
+  startSize: number;
+  endSize: number;
   color: string;
 }
 
@@ -27,9 +32,17 @@ const FOLLOW_RATE = 6;
 // Zoom steps of 1/16: 16px terrain tiles then land on whole device pixels,
 // so the unsmoothed sprites never show seams.
 const ZOOM_STEP = 16;
-const SPARK_LIFE = 0.4;
-const SPARK_COLORS = ['#ffcf3d', '#ff8a2a', '#e8ecf8'];
-const MAX_SPARKS = 60;
+// Exhaust: short hot flames at the tracks and slower smoke puffs that grow
+// and fade behind the tank.
+const FLAME_LIFE = 0.22;
+const FLAME_COLORS = ['#ffd84a', '#ff9a2e', '#ff6a1f'];
+const SMOKE_LIFE = 0.8;
+const SMOKE_COLORS = ['#9aa5b4', '#b7c0cc', '#7f8a99'];
+const MAX_PARTICLES = 90;
+// Exhaust sits this far behind the tank centre
+const EXHAUST_OFFSET = 28;
+// Below this speed (px/s) the trail follows the facing instead
+const MIN_TRAIL_SPEED = 20;
 
 function snapZoom(zoom: number): number {
   return Math.max(1, Math.floor(zoom * ZOOM_STEP)) / ZOOM_STEP;
@@ -41,13 +54,16 @@ function snapZoom(zoom: number): number {
  * `ctx.translate(-camera.x, -camera.y)` with the camera lerping after the
  * local player's tank, while menus and notices are letterboxed to the classic
  * 1024x896 screen. DOM name tags and popups map through `canvasToLayer`,
- * pointer input back through `clientToCanvas`. Also draws an exhaust spark
- * trail behind the moving player tank.
+ * pointer input back through `clientToCanvas`. Also paints the arena floor
+ * and a flame/smoke exhaust trail behind the moving player tank.
  */
 class BattleCamera {
   private stage: HTMLElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
-  private readonly sparks: Spark[] = [];
+  private readonly particles: Particle[] = [];
+  // Last followed tank centre, to get its real driving direction
+  private lastPx: number | null = null;
+  private lastPy = 0;
 
   // Camera centre in canvas (world) px.
   private cx = config.CANVAS_WIDTH / 2;
@@ -96,7 +112,7 @@ class BattleCamera {
       this.cy += (py - this.cy) * k;
     }
 
-    this.updateSparks(focus, dt, px, py);
+    this.updateParticles(focus, dt, px, py);
   }
 
   /** Level ended: back to the menu screen. */
@@ -104,7 +120,8 @@ class BattleCamera {
     this.active = false;
     this.lastTime = 0;
     this.setFullmap(false);
-    this.sparks.length = 0;
+    this.particles.length = 0;
+    this.lastPx = null;
     this.cx = config.CANVAS_WIDTH / 2;
     this.cy = config.CANVAS_HEIGHT / 2;
   }
@@ -148,7 +165,8 @@ class BattleCamera {
       height,
       world,
       screen,
-      drawWorldFx: this.sparks.length > 0 ? this.drawSparks : undefined,
+      drawWorldBackground: this.active ? drawArenaFloor : undefined,
+      drawWorldFx: this.particles.length > 0 ? this.drawParticles : undefined,
     };
     return this.view;
   }
@@ -214,42 +232,77 @@ class BattleCamera {
     document.documentElement.classList.toggle(FULLMAP_CLASS, fullmap);
   }
 
-  private updateSparks(focus: CameraFocus, dt: number, px: number, py: number): void {
-    if (focus.moving && this.sparks.length < MAX_SPARKS) {
-      // Behind the tank: opposite of its facing
-      const rad = (focus.rotation * Math.PI) / 180;
-      const fx = Math.sin(rad);
-      const fy = -Math.cos(rad);
-      for (let i = 0; i < 2; i += 1) {
-        this.sparks.push({
-          x: px - fx * 26 + (Math.random() - 0.5) * 10,
-          y: py - fy * 26 + (Math.random() - 0.5) * 10,
-          vx: -fx * 30 + (Math.random() - 0.5) * 30,
-          vy: -fy * 30 + (Math.random() - 0.5) * 30,
-          life: SPARK_LIFE,
-          color: SPARK_COLORS[Math.floor(Math.random() * SPARK_COLORS.length)],
-        });
+  private updateParticles(focus: CameraFocus, dt: number, px: number, py: number): void {
+    // Real driving direction (360°), falling back to the facing
+    let dirX = 0;
+    let dirY = 0;
+    if (this.lastPx !== null && dt > 0) {
+      const vx = (px - this.lastPx) / dt;
+      const vy = (py - this.lastPy) / dt;
+      const speed = Math.hypot(vx, vy);
+      if (speed >= MIN_TRAIL_SPEED) {
+        dirX = vx / speed;
+        dirY = vy / speed;
       }
     }
+    if (dirX === 0 && dirY === 0) {
+      const rad = (focus.rotation * Math.PI) / 180;
+      dirX = Math.sin(rad);
+      dirY = -Math.cos(rad);
+    }
+    this.lastPx = px;
+    this.lastPy = py;
 
-    for (let i = this.sparks.length - 1; i >= 0; i -= 1) {
-      const spark = this.sparks[i];
-      spark.life -= dt;
-      if (spark.life <= 0) {
-        this.sparks.splice(i, 1);
+    if (focus.moving && this.particles.length < MAX_PARTICLES) {
+      const backX = px - dirX * EXHAUST_OFFSET;
+      const backY = py - dirY * EXHAUST_OFFSET;
+      const spread = (): number => (Math.random() - 0.5) * 12;
+      this.particles.push({
+        x: backX + spread(),
+        y: backY + spread(),
+        vx: -dirX * 60 + spread() * 2,
+        vy: -dirY * 60 + spread() * 2,
+        life: FLAME_LIFE,
+        maxLife: FLAME_LIFE,
+        startSize: 5,
+        endSize: 1.5,
+        color: FLAME_COLORS[Math.floor(Math.random() * FLAME_COLORS.length)],
+      });
+      this.particles.push({
+        x: backX + spread(),
+        y: backY + spread(),
+        vx: -dirX * 25 + spread(),
+        // Smoke drifts up a little
+        vy: -dirY * 25 - 12 + spread(),
+        life: SMOKE_LIFE,
+        maxLife: SMOKE_LIFE,
+        startSize: 4,
+        endSize: 11,
+        color: SMOKE_COLORS[Math.floor(Math.random() * SMOKE_COLORS.length)],
+      });
+    }
+
+    for (let i = this.particles.length - 1; i >= 0; i -= 1) {
+      const particle = this.particles[i];
+      particle.life -= dt;
+      if (particle.life <= 0) {
+        this.particles.splice(i, 1);
         continue;
       }
-      spark.x += spark.vx * dt;
-      spark.y += spark.vy * dt;
+      particle.x += particle.vx * dt;
+      particle.y += particle.vy * dt;
     }
   }
 
-  private drawSparks = (context: NativeContext): void => {
-    for (const spark of this.sparks) {
-      const size = 2 + Math.round((spark.life / SPARK_LIFE) * 4);
-      context.globalAlpha = spark.life / SPARK_LIFE;
-      context.fillStyle = spark.color;
-      context.fillRect(Math.round(spark.x), Math.round(spark.y), size, size);
+  private drawParticles = (context: NativeContext): void => {
+    for (const particle of this.particles) {
+      const t = particle.life / particle.maxLife;
+      const radius = particle.endSize + (particle.startSize - particle.endSize) * t;
+      context.globalAlpha = 0.85 * t;
+      context.fillStyle = particle.color;
+      context.beginPath();
+      context.arc(particle.x, particle.y, radius, 0, Math.PI * 2);
+      context.fill();
     }
     context.globalAlpha = 1;
   };
