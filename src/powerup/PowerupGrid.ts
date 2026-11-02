@@ -125,6 +125,35 @@ export class PowerupGrid {
     return freeLargeCells;
   }
 
+  /** Top-left of the free spawn spot covering `center`, or null if blocked. */
+  public getPositionAt(center: Vector): Vector | null {
+    const half = config.TILE_SIZE_LARGE / 2;
+    const colIndex = Math.round((center.x - half) / this.tileSize);
+    const rowIndex = Math.round((center.y - half) / this.tileSize);
+    const isFree = this.getFreeLargeCellIndexes().some(
+      (index) => index.x === colIndex && index.y === rowIndex,
+    );
+    return isFree
+      ? new Vector(colIndex, rowIndex).multScalar(this.tileSize)
+      : null;
+  }
+
+  /** Random free spawn spot whose centre is within `radius` of `center`. */
+  public getRandomPositionNear(center: Vector, radius: number): Vector | null {
+    const half = config.TILE_SIZE_LARGE / 2;
+    const nearCells = this.getFreeLargeCellIndexes().filter((index) => {
+      const dx = index.x * this.tileSize + half - center.x;
+      const dy = index.y * this.tileSize + half - center.y;
+      return dx * dx + dy * dy <= radius * radius;
+    });
+
+    if (nearCells.length === 0) {
+      return null;
+    }
+
+    return RandomUtils.arrayElement(nearCells).multScalar(this.tileSize);
+  }
+
   public getRandomPosition(): Vector {
     const freeLargeCells = this.getFreeLargeCellIndexes();
 

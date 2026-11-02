@@ -1,5 +1,5 @@
 import { Logger, RandomUtils, Timer, Vector } from '../../core';
-import { GameUpdateArgs, Rotation } from '../../game';
+import { GameUpdateArgs, Rotation, Tag } from '../../game';
 import { Tank } from '../../gameObjects';
 import * as config from '../../config';
 
@@ -18,6 +18,11 @@ const FIRE_MAX_DELAY = 1.5;
 const STUCK_FIRE_CHANCE = 30;
 const UNSTUCK_THINK_CHANCE = 5;
 const ROTATE_TOWARDS_BASE_CHANCE = 30;
+// Far out in the open arena enemies head in more often
+const ROTATE_TOWARDS_BASE_FAR_CHANCE = 55;
+const FAR_DISTANCE = config.MAP_SIZE / 2;
+// A player tank this close becomes the target instead of the base
+const CHASE_RADIUS = config.TILE_SIZE_LARGE * 6;
 const ROTATE_UP_CHANCE = 10;
 
 const ROTATIONS = [Rotation.Up, Rotation.Down, Rotation.Left, Rotation.Right];
@@ -146,13 +151,17 @@ export class AiTankBehavior extends TankBehavior {
   }
 
   private getNextRotation(tank: Tank): Rotation {
-    const shouldRotateTowardsBase = RandomUtils.probability(
-      ROTATE_TOWARDS_BASE_CHANCE,
+    const target = this.getTarget(tank);
+    const distance = target.clone().sub(tank.getCenter()).length();
+    const shouldRotateTowardsTarget = RandomUtils.probability(
+      distance > FAR_DISTANCE
+        ? ROTATE_TOWARDS_BASE_FAR_CHANCE
+        : ROTATE_TOWARDS_BASE_CHANCE,
     );
 
-    if (shouldRotateTowardsBase) {
-      this.log.debug('I want to go towards base');
-      return this.getRotationTowardsBase(tank);
+    if (shouldRotateTowardsTarget) {
+      this.log.debug('I want to go towards my target');
+      return this.getRotationTowards(tank, target);
     }
 
     // Enemy should rotate up less, because base it at the bottom
@@ -179,29 +188,39 @@ export class AiTankBehavior extends TankBehavior {
     return RandomUtils.arrayElement(rotations);
   }
 
-  private getRotationTowardsBase(tank: Tank): Rotation {
-    const basePosition = new Vector(
-      config.BASE_DEFAULT_POSITION.x,
-      config.BASE_DEFAULT_POSITION.y,
+  // Centre of the nearest player tank within CHASE_RADIUS, else the base.
+  private getTarget(tank: Tank): Vector {
+    const center = tank.getCenter();
+    let target = new Vector(
+      config.BASE_DEFAULT_POSITION.x + config.BASE_DEFAULT_SIZE.width / 2,
+      config.BASE_DEFAULT_POSITION.y + config.BASE_DEFAULT_SIZE.height / 2,
     );
-    const tankPosition = tank.position;
+    let nearest = CHASE_RADIUS;
 
-    const direction = basePosition
-      .clone()
-      .sub(tankPosition)
-      .normalize();
-
-    const maxValue = Math.max(direction.x, direction.y);
-
-    if (Math.abs(direction.x) === Math.abs(maxValue)) {
-      if (direction.x > 0) {
-        return Rotation.Right;
+    const siblings = tank.parent === null ? [] : tank.parent.children;
+    for (const other of siblings) {
+      if (!other.tags.includes(Tag.Player)) {
+        continue;
       }
-      if (direction.x < 0) {
-        return Rotation.Left;
+      const otherCenter = other.getCenter();
+      const distance = otherCenter.clone().sub(center).length();
+      if (distance < nearest) {
+        nearest = distance;
+        target = otherCenter;
       }
     }
 
-    return Rotation.Down;
+    return target;
+  }
+
+  // Along the axis with the longer way to go
+  private getRotationTowards(tank: Tank, target: Vector): Rotation {
+    const delta = target.clone().sub(tank.getCenter());
+
+    if (Math.abs(delta.x) > Math.abs(delta.y)) {
+      return delta.x > 0 ? Rotation.Right : Rotation.Left;
+    }
+
+    return delta.y < 0 ? Rotation.Up : Rotation.Down;
   }
 }

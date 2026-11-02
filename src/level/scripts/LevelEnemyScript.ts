@@ -135,6 +135,7 @@ export class LevelEnemyScript extends LevelScript {
     tank.hit.addListener(() => {
       this.eventBus.enemyHit.notify({
         type: tank.type,
+        centerPosition: tank.getCenter(),
       });
     });
 

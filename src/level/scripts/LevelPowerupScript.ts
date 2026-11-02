@@ -1,4 +1,4 @@
-import { Rect, Timer } from '../../core';
+import { Rect, Timer, Vector } from '../../core';
 import { DebugLevelPowerupMenu } from '../../debug';
 import { GameUpdateArgs } from '../../game';
 import { Powerup } from '../../gameObjects';
@@ -12,6 +12,8 @@ import {
   LevelEnemySpawnCompletedEvent,
   LevelMapTileDestroyedEvent,
 } from '../events';
+
+const POWERUP_PLAYER_RADIUS = config.TILE_SIZE_LARGE * 10;
 
 export class LevelPowerupScript extends LevelScript {
   private timer: Timer;
@@ -55,7 +57,7 @@ export class LevelPowerupScript extends LevelScript {
       return;
     }
 
-    this.spawn();
+    this.spawn(null, event.centerPosition);
   };
 
   // Remove active powerup whenever new enemy spawns with drop
@@ -92,7 +94,7 @@ export class LevelPowerupScript extends LevelScript {
     this.grid.freeRect(rect);
   };
 
-  private spawn(type: PowerupType = null): void {
+  private spawn(type: PowerupType = null, dropCenter: Vector = null): void {
     // Override previous powerup with newly picked up one
     this.revoke();
 
@@ -115,7 +117,7 @@ export class LevelPowerupScript extends LevelScript {
       });
     }
 
-    const position = this.grid.getRandomPosition();
+    const position = this.pickPosition(dropCenter);
 
     if (playerTankRects.length > 0) {
       this.grid.restore();
@@ -163,6 +165,41 @@ export class LevelPowerupScript extends LevelScript {
       type: powerup.type,
       position,
     });
+  }
+
+  // The arena is huge: a drop lands where the enemy was hit or, if that spot
+  // is blocked, within POWERUP_PLAYER_RADIUS of the nearest player tank.
+  private pickPosition(dropCenter: Vector): Vector | null {
+    if (dropCenter !== null) {
+      const atDrop = this.grid.getPositionAt(dropCenter);
+      if (atDrop !== null) {
+        return atDrop;
+      }
+    }
+
+    const anchor = this.getNearestPlayerCenter(dropCenter);
+    if (anchor === null) {
+      return null;
+    }
+    return this.grid.getRandomPositionNear(anchor, POWERUP_PLAYER_RADIUS);
+  }
+
+  // Nearest live player tank to `from` (the first one when `from` is null)
+  private getNearestPlayerCenter(from: Vector): Vector | null {
+    let nearest: Vector = null;
+    let nearestDistance = Infinity;
+    this.world.getPlayerTanks().forEach((playerTank) => {
+      if (playerTank === null || playerTank === undefined) {
+        return;
+      }
+      const center = playerTank.getCenter();
+      const distance = from === null ? 0 : center.clone().sub(from).length();
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = center;
+      }
+    });
+    return nearest;
   }
 
   private revoke(): void {

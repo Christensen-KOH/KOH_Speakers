@@ -22,6 +22,21 @@ const SHAPES: [number, number][][] = [
   [[0, 0]],
 ];
 
+// Enemy spawn cells (col, row) just inside the steel ring: along the top and
+// down the left and right edges, ordered so consecutive enemies alternate
+// sides. Cluster scattering keeps this outer lane free.
+const ENEMY_EDGE_SPAWNS: [number, number][] = [
+  [(COUNT - 1) / 2, 1],
+  [1, 13],
+  [COUNT - 2, 13],
+  [12, 1],
+  [COUNT - 13, 1],
+  [1, 25],
+  [COUNT - 2, 25],
+  [1, 1],
+  [COUNT - 2, 1],
+];
+
 // Small seeded PRNG so every level (and every co-op client) gets the same arena
 function mulberry32(seed: number): () => number {
   let state = seed >>> 0;
@@ -102,8 +117,9 @@ function scatterClusters(seed: number): TerrainRegionConfig[] {
 
 /**
  * Turns an authored 13x13 map into the open battle arena: the map (with its
- * default pads) sits bottom-centre, a steel ring walls the arena in, and
- * brick clusters seeded by `seed` fill the open ground around it.
+ * default pads) sits bottom-centre, a steel ring walls the arena in, brick
+ * clusters seeded by `seed` fill the open ground around it, and enemies
+ * spawn along the arena's outer edges.
  * Everything in the returned config is in arena coordinates.
  */
 export function buildArena(mapConfig: MapConfig, seed: number): MapConfig {
@@ -118,7 +134,7 @@ export function buildArena(mapConfig: MapConfig, seed: number): MapConfig {
     spawn: {
       enemy: {
         list: source.spawn.enemy.list.map((item) => ({ ...item })),
-        locations: mapConfig.getEnemySpawnPositions().map(offsetPoint),
+        locations: ENEMY_EDGE_SPAWNS.map(([col, row]) => ({ x: col * TILE, y: row * TILE })),
       },
       player: {
         locations: mapConfig.getPlayerSpawnPositions().map(offsetPoint),
