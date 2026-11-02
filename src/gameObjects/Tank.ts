@@ -28,6 +28,7 @@ import * as config from '../config';
 import { Bullet } from './Bullet';
 import { Shield } from './Shield';
 import { TankShadowPainter } from './TankShadowPainter';
+import { facingFor, OMNI_RADIUS, pushCircleOut } from '../tank/omniDrive';
 
 export enum TankState {
   Uninitialized,
@@ -56,32 +57,6 @@ enum TankCollisionResolution {
 
 const SKIN_LAYER_DESCRIPTIONS = [{ opacity: 1 }, { opacity: 0.5 }];
 const SNAP_SIZE = config.TILE_SIZE_MEDIUM;
-// Circle hitbox for free-driving tanks: a little inside the 64px sprite so
-// they fit 64px gaps and round corners instead of snagging on them.
-const CIRCLE_RADIUS = 30;
-const CIRCLE_PASSES = 3;
-// Keep facing the current side while the drive direction is within ~53° of it
-const FACING_KEEP_DOT = 0.6;
-
-const FACING_VECTORS: Record<number, [number, number]> = {
-  [Rotation.Up]: [0, -1],
-  [Rotation.Right]: [1, 0],
-  [Rotation.Down]: [0, 1],
-  [Rotation.Left]: [-1, 0],
-};
-
-// Side the sprite faces (and shoots toward) while driving along (dx, dy)
-function facingFor(dx: number, dy: number, current: Rotation): Rotation {
-  const length = Math.hypot(dx, dy);
-  const vector = FACING_VECTORS[current];
-  if (vector !== undefined && (vector[0] * dx + vector[1] * dy) / length > FACING_KEEP_DOT) {
-    return current;
-  }
-  if (Math.abs(dx) > Math.abs(dy)) {
-    return dx > 0 ? Rotation.Right : Rotation.Left;
-  }
-  return dy > 0 ? Rotation.Down : Rotation.Up;
-}
 
 const STUN_BLINK_DELAY = 0.1;
 // Sideways spacing between shells of a multi-shell volley (Scatter Shot).
@@ -384,7 +359,7 @@ export class Tank extends GameObject {
       this.state = TankState.Moving;
     }
 
-    const facing = facingFor(dx, dy, this.rotation as Rotation);
+    const facing = facingFor(dx, dy, this.rotation);
     if (facing !== this.rotation) {
       this.rotate(facing);
     }
@@ -590,61 +565,17 @@ export class Tank extends GameObject {
    */
   protected slideAroundWalls(wallContacts: CollisionContact[]): void {
     const start = this.collider.getCurrentBox().getCenter();
-    let cx = start.x;
-    let cy = start.y;
-    const radius = CIRCLE_RADIUS;
+    const boxes = wallContacts.map((contact) => {
+      const box = contact.collider.getCurrentBox();
+      return { minX: box.min.x, minY: box.min.y, maxX: box.max.x, maxY: box.max.y };
+    });
+    const end = pushCircleOut(start.x, start.y, OMNI_RADIUS, boxes);
 
-    for (let pass = 0; pass < CIRCLE_PASSES; pass += 1) {
-      let pushed = false;
-
-      for (const contact of wallContacts) {
-        const box = contact.collider.getCurrentBox();
-        const nearestX = Math.min(box.max.x, Math.max(box.min.x, cx));
-        const nearestY = Math.min(box.max.y, Math.max(box.min.y, cy));
-        const dx = cx - nearestX;
-        const dy = cy - nearestY;
-        const distanceSq = dx * dx + dy * dy;
-
-        if (distanceSq >= radius * radius) {
-          continue;
-        }
-        pushed = true;
-
-        if (distanceSq > 0.0001) {
-          const distance = Math.sqrt(distanceSq);
-          const push = (radius - distance) / distance;
-          cx += dx * push;
-          cy += dy * push;
-          continue;
-        }
-
-        // Centre inside the box: leave through the nearest side
-        const left = cx - box.min.x + radius;
-        const right = box.max.x - cx + radius;
-        const up = cy - box.min.y + radius;
-        const down = box.max.y - cy + radius;
-        const shortest = Math.min(left, right, up, down);
-        if (shortest === left) {
-          cx -= left;
-        } else if (shortest === right) {
-          cx += right;
-        } else if (shortest === up) {
-          cy -= up;
-        } else {
-          cy += down;
-        }
-      }
-
-      if (!pushed) {
-        break;
-      }
-    }
-
-    if (cx === start.x && cy === start.y) {
+    if (end.x === start.x && end.y === start.y) {
       return;
     }
 
-    this.position.add(new Vector(cx - start.x, cy - start.y));
+    this.position.add(new Vector(end.x - start.x, end.y - start.y));
     this.updateMatrix(true);
     this.collider.update();
   }

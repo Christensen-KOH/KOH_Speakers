@@ -398,6 +398,17 @@ export class AdaptiveControls {
     return dy > 0 ? Rotation.Down : Rotation.Up;
   }
 
+  /** Unit vector from `center` toward the drive target, or null when not driving. */
+  public getMouseDriveVector(center: FieldPoint): { x: number; y: number } | null {
+    if (this.getMouseDriveRotation(center) < 0 || this.mouse === null) {
+      return null;
+    }
+    const dx = this.mouse.x - center.x;
+    const dy = this.mouse.y - center.y;
+    const length = Math.hypot(dx, dy);
+    return length === 0 ? null : { x: dx / length, y: dy / length };
+  }
+
   /**
    * Single player: holds the movement key that drives the tank at `center`
    * toward the cursor (null stops). Co-op reads `getMouseDriveRotation`.
@@ -406,11 +417,7 @@ export class AdaptiveControls {
     const rotation = center === null ? -1 : this.getMouseDriveRotation(center);
     // The tank drives straight at the cursor/finger (any angle); the held
     // key below keeps everything else that reads the D-pad in step
-    analogDrive.setPointer(
-      rotation < 0 || this.mouse === null
-        ? null
-        : { x: this.mouse.x - center.x, y: this.mouse.y - center.y },
-    );
+    analogDrive.setPointer(center === null ? null : this.getMouseDriveVector(center));
     const direction = rotation < 0 ? null : ROTATION_DIRECTIONS[rotation as Rotation];
     if (direction === this.mouseDirection) {
       return;

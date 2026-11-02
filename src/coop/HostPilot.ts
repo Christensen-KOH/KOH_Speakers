@@ -1,5 +1,8 @@
 import type { LivePlayerSummary } from '../live/protocol';
 
+import { analogDrive } from '../input/analogDrive';
+import { heldVector } from '../tank/omniDrive';
+
 import type { RawControls } from './CoopLocalPlayer';
 
 // Seat id of the host's own tank on the shared battlefield.
@@ -26,7 +29,8 @@ function isTypingTarget(target: EventTarget | null): boolean {
 
 /**
  * Keyboard half of the teacher's own tank on the shared battlefield: WASD or
- * arrows to move, Space to fire. CoopLocalPlayer adds the mouse, shells,
+ * arrows to move (8 directions, or any angle on a gamepad stick), Space to
+ * fire. CoopLocalPlayer adds the mouse, shells,
  * fuel and upgrades, exactly like a student's device.
  */
 export class HostPilot {
@@ -62,11 +66,17 @@ export class HostPilot {
 
   /** This frame's keyboard state; a fire press is reported once. */
   public takeRaw(): RawControls {
-    const last = this.held[this.held.length - 1];
     const pressed = this.fireSeq !== this.takenFireSeq;
     this.takenFireSeq = this.fireSeq;
+    // Keys add up to 8 directions; a gamepad stick steers at any angle
+    let drive = heldVector(this.held.map((key) => DIRECTION_KEYS[key]));
+    const stick = this.active ? analogDrive.readStick() : null;
+    if (stick !== null) {
+      drive = stick;
+    }
     return {
-      dir: last === undefined ? -1 : DIRECTION_KEYS[last],
+      mx: drive.x,
+      my: drive.y,
       pressed,
       held: this.firing,
     };

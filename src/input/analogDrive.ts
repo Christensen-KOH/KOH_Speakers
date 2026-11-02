@@ -26,7 +26,8 @@ class AnalogDrive {
     return this.readStick();
   }
 
-  private readStick(): DriveVector | null {
+  /** First gamepad left stick past the dead zone, or null. */
+  public readStick(): DriveVector | null {
     const pads = navigator.getGamepads?.() ?? [];
     for (const pad of pads) {
       if (!pad) {

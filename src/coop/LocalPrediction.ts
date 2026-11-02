@@ -1,11 +1,12 @@
 import type { CoopTankState } from '../live/protocol';
+import { facingFor, OMNI_RADIUS, pushCircleOut } from '../tank/omniDrive';
 import * as config from '../config';
 
 import type { SolidRect } from './WorldReplica';
 
 const HALF = config.TILE_SIZE_LARGE / 2;
-// Forgiveness on the sideways axis so a tank slips past wall corners.
-const CORNER_SLIP = 3;
+// Only walls this close can touch the tank's circle
+const NEAR = HALF + OMNI_RADIUS;
 // Gap (px) between the predicted and the host's tank that gets corrected.
 export const RECONCILE_DISTANCE = 12;
 // Fraction of the excess pulled back each 60fps frame.
@@ -17,16 +18,18 @@ const SNAP_DISTANCE = 96;
 const LATENCY_ALLOWANCE = 0.1;
 
 export interface PredictionInput {
-  // Held direction in degrees, or -1.
-  dir: number;
+  // Drive vector (any angle), (0, 0) when not driving.
+  mx: number;
+  my: number;
   // Fraction of full speed (1, or the crawl factor when out of fuel).
   speedFactor: number;
 }
 
 /**
  * Moves the local player's tank on their own screen the moment they press a
- * key, using the same wall rules as the host, then eases it back toward the
- * host's authoritative position only when the two drift apart.
+ * key, with the same 360° driving and circle wall sliding as the host, then
+ * eases it back toward the host's authoritative position only when the two
+ * drift apart.
  */
 export class LocalPrediction {
   public x = 0;
@@ -59,10 +62,10 @@ export class LocalPrediction {
       this.active = true;
     }
 
-    this.moving = input.dir >= 0;
+    this.moving = input.mx !== 0 || input.my !== 0;
     if (this.moving) {
-      this.r = input.dir;
-      this.drive(input.dir, speed * input.speedFactor * deltaTime, solids);
+      this.r = facingFor(input.mx, input.my, this.r);
+      this.drive(input.mx, input.my, speed * input.speedFactor * deltaTime, solids);
     } else {
       // Aimed shots turn the tank on the host: follow when standing still
       this.r = auth.r;
@@ -71,37 +74,30 @@ export class LocalPrediction {
     this.reconcile(deltaTime, auth, speed);
   }
 
-  private drive(dir: number, distance: number, solids: SolidRect[]): void {
-    const dx = dir === 90 ? distance : dir === 270 ? -distance : 0;
-    const dy = dir === 180 ? distance : dir === 0 ? -distance : 0;
-    this.x = clamp(this.x + dx, HALF, config.FIELD_SIZE - HALF);
-    this.y = clamp(this.y + dy, HALF, config.FIELD_SIZE - HALF);
+  private drive(mx: number, my: number, distance: number, solids: SolidRect[]): void {
+    const length = Math.hypot(mx, my);
+    this.x = clamp(this.x + (mx / length) * distance, HALF, config.FIELD_SIZE - HALF);
+    this.y = clamp(this.y + (my / length) * distance, HALF, config.FIELD_SIZE - HALF);
 
+    const boxes = [];
     for (const solid of solids) {
-      const left = this.x - HALF;
-      const right = this.x + HALF;
-      const top = this.y - HALF;
-      const bottom = this.y + HALF;
-      if (dx !== 0) {
-        const hits =
-          top + CORNER_SLIP < solid.y + solid.height &&
-          bottom - CORNER_SLIP > solid.y &&
-          left < solid.x + solid.width &&
-          right > solid.x;
-        if (hits) {
-          this.x = dx > 0 ? solid.x - HALF : solid.x + solid.width + HALF;
-        }
-      } else if (dy !== 0) {
-        const hits =
-          left + CORNER_SLIP < solid.x + solid.width &&
-          right - CORNER_SLIP > solid.x &&
-          top < solid.y + solid.height &&
-          bottom > solid.y;
-        if (hits) {
-          this.y = dy > 0 ? solid.y - HALF : solid.y + solid.height + HALF;
-        }
+      if (
+        solid.x - NEAR < this.x &&
+        solid.x + solid.width + NEAR > this.x &&
+        solid.y - NEAR < this.y &&
+        solid.y + solid.height + NEAR > this.y
+      ) {
+        boxes.push({
+          minX: solid.x,
+          minY: solid.y,
+          maxX: solid.x + solid.width,
+          maxY: solid.y + solid.height,
+        });
       }
     }
+    const pushed = pushCircleOut(this.x, this.y, OMNI_RADIUS, boxes);
+    this.x = pushed.x;
+    this.y = pushed.y;
   }
 
   // Drifting more than 12px: ease back toward the host, never past the limit

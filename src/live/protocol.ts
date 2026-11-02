@@ -98,8 +98,11 @@ export interface CoopLoadout {
 }
 
 export interface CoopInput {
-  // Held direction in degrees, or -1 for none.
+  // Held direction in degrees (nearest side of the drive vector), or -1.
   dir: number;
+  // Free (360°) drive direction, length 0..1; (0, 0) when not driving.
+  mx: number;
+  my: number;
   // Fire held (rapid fire while possible).
   firing: boolean;
   // Bumped on every fire press, so taps shorter than a packet still count.
@@ -182,6 +185,8 @@ export interface CoopWorld {
 export function emptyCoopInput(): CoopInput {
   return {
     dir: -1,
+    mx: 0,
+    my: 0,
     firing: false,
     fireSeq: 0,
     aim: -1,
@@ -190,6 +195,17 @@ export function emptyCoopInput(): CoopInput {
     thinking: false,
     loadout: { weaponTier: 0, speedBoost: false, heavyArmor: false },
   };
+}
+
+// A drive vector component in [-1, 1]; the pair is clamped to length 1
+function cleanDrive(rawX: unknown, rawY: unknown): { mx: number; my: number } {
+  const x = typeof rawX === 'number' && Number.isFinite(rawX) ? rawX : 0;
+  const y = typeof rawY === 'number' && Number.isFinite(rawY) ? rawY : 0;
+  const length = Math.hypot(x, y);
+  if (length > 1) {
+    return { mx: x / length, my: y / length };
+  }
+  return { mx: x, my: y };
 }
 
 function cleanRotation(value: unknown): number {
@@ -203,6 +219,7 @@ export function cleanCoopInput(raw: unknown): CoopInput {
     : {}) as Record<string, unknown>;
   return {
     dir: cleanRotation(data.dir),
+    ...cleanDrive(data.mx, data.my),
     firing: data.firing === true,
     fireSeq: clampInt(data.fireSeq, 0, Number.MAX_SAFE_INTEGER),
     aim: cleanRotation(data.aim),

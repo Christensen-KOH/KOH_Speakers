@@ -15,6 +15,7 @@ import type { FieldPoint } from '../ui';
 import { battleCamera } from '../ui/Camera';
 import { QUESTION_KEY_LABELS } from '../ui/overlayKeys';
 import { isTouchUi } from '../ui/touchUi';
+import { facingFor } from '../tank/omniDrive';
 
 import { LocalPrediction } from './LocalPrediction';
 import type { LocalTankView, SolidRect } from './WorldReplica';
@@ -28,11 +29,17 @@ export const SHOP_ACTIONS: Partial<Record<ShopItemId, CoopAction>> = {
 
 /** What the keyboard (or touch pad) asks for this frame. */
 export interface RawControls {
-  // Direction held, in degrees, or -1.
-  dir: number;
+  // Drive vector from keys (8-way) or the gamepad stick; (0, 0) for none.
+  mx: number;
+  my: number;
   // Fire pressed this frame / held.
   pressed: boolean;
   held: boolean;
+}
+
+// Drive components travel with 3 decimals: plenty for steering, small packets
+function roundDrive(value: number): number {
+  return Math.round(value * 1000) / 1000;
 }
 
 function cardinal(dx: number, dy: number): Rotation {
@@ -152,15 +159,26 @@ export class CoopLocalPlayer {
     const tank = this.tank;
     const canAct = !thinking && !this.isFrozen() && tank !== null;
 
-    // Keyboard first, then the mouse (right-click / drag toward the cursor)
-    let dir = -1;
+    // Keys / stick first, then the mouse or finger (drive toward it), at any
+    // angle; `dir` is the side the tank faces while driving that way
+    let mx = 0;
+    let my = 0;
     if (canAct) {
-      dir = raw.dir;
-      if (dir < 0) {
+      mx = raw.mx;
+      my = raw.my;
+      if (mx === 0 && my === 0) {
         const origin = this.prediction.isActive() ? this.prediction : tank;
-        dir = controls.getMouseDriveRotation(origin);
+        const mouse = controls.getMouseDriveVector(origin);
+        if (mouse !== null) {
+          mx = mouse.x;
+          my = mouse.y;
+        }
       }
     }
+    mx = roundDrive(mx);
+    my = roundDrive(my);
+    const facingNow = this.prediction.isActive() ? this.prediction.r : tank?.r ?? 0;
+    const dir = mx !== 0 || my !== 0 ? facingFor(mx, my, facingNow) : -1;
 
     // Moving the mouse turns the tank in place; any drive cancels it
     let face = this.face;
@@ -199,6 +217,8 @@ export class CoopLocalPlayer {
     const { loadout } = this.player;
     this.input = {
       dir,
+      mx,
+      my,
       firing,
       fireSeq,
       aim,
@@ -215,7 +235,8 @@ export class CoopLocalPlayer {
     this.prediction.step(
       deltaTime,
       {
-        dir,
+        mx,
+        my,
         speedFactor: crawl ? DEFAULT_ECONOMY_SETTINGS.emptyFuelSpeedFactor : 1,
       },
       this.getSpeed(),

@@ -20,6 +20,11 @@ export class RemoteTankBehavior extends TankBehavior {
     this.lastFireSeq = seat.input.fireSeq;
   }
 
+  public setup(tank: PlayerTank): void {
+    // 360° driving with circle wall sliding, like local players
+    tank.omni = true;
+  }
+
   public update(tank: PlayerTank, { deltaTime }: GameUpdateArgs): void {
     const { input } = this.seat;
 
@@ -36,16 +41,24 @@ export class RemoteTankBehavior extends TankBehavior {
       this.tryFire(tank);
     }
 
-    if (!tank.isSliding() && !tank.isStunned() && input.dir >= 0) {
-      tank.rotate(input.dir as Rotation);
+    // Older clients only send the side they hold
+    let { mx, my } = input;
+    if (mx === 0 && my === 0 && input.dir >= 0) {
+      const rad = (input.dir * Math.PI) / 180;
+      mx = Math.round(Math.sin(rad));
+      my = -Math.round(Math.cos(rad));
+    }
+    const driving = mx !== 0 || my !== 0;
+
+    if (!tank.isSliding() && !tank.isStunned() && driving) {
       const speed = input.crawl ? DEFAULT_ECONOMY_SETTINGS.emptyFuelSpeedFactor : 1;
-      tank.move(deltaTime * speed);
-    } else if (input.dir < 0 && tank.state !== TankState.Idle) {
+      tank.moveVector(mx, my, deltaTime * speed);
+    } else if (!driving && tank.state !== TankState.Idle) {
       tank.idle();
     }
 
     // Standing still: the mouse cursor turns the barrel
-    if (input.dir < 0 && input.face >= 0 && !tank.isSliding() && !tank.isStunned()) {
+    if (!driving && input.face >= 0 && !tank.isSliding() && !tank.isStunned()) {
       tank.rotate(input.face as Rotation);
     }
   }

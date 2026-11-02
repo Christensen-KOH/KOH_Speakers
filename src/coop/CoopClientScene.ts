@@ -9,6 +9,9 @@ import type { FieldPoint } from '../ui';
 
 import { CoopLocalPlayer, RawControls, SHOP_ACTIONS } from './CoopLocalPlayer';
 import { TankLabels } from './TankLabels';
+import { analogDrive } from '../input/analogDrive';
+import { heldVector } from '../tank/omniDrive';
+
 import { unpackGrid } from './grid';
 import { WorldReplica } from './WorldReplica';
 
@@ -126,14 +129,17 @@ export class CoopClientScene extends GameScene {
   private readRawControls(): RawControls {
     const { inputManager } = this.args;
     const method = inputManager.getActiveMethod();
-    let dir = -1;
+    // Keys add up to 8 directions; a gamepad stick steers at any angle
+    const held: number[] = [];
     for (const [controls, rotation] of DIRECTIONS) {
-      if (method.isHoldLastAny(controls)) {
-        dir = rotation;
+      if (method.isHoldAny(controls)) {
+        held.push(rotation);
       }
     }
+    const drive = analogDrive.readStick() ?? heldVector(held);
     return {
-      dir,
+      mx: drive.x,
+      my: drive.y,
       pressed: method.isDownAny(LevelPlayInputContext.Fire),
       held: method.isHoldAny(LevelPlayInputContext.RapidFire),
     };
