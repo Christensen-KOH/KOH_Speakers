@@ -1,4 +1,5 @@
 import { PLAYER_CSS_COLORS } from '../tank/TankColorFactory';
+import { battleCamera } from '../ui/Camera';
 import * as config from '../config';
 
 import './styles/coop.css';
@@ -61,11 +62,17 @@ export class TankLabels {
         this.labels.set(label.id, elements);
       }
 
-      const left = ((config.BORDER_LEFT_WIDTH + label.x) / config.CANVAS_WIDTH) * 100;
-      const top =
-        ((config.BORDER_TOP_BOTTOM_HEIGHT + label.y - LABEL_OFFSET_Y) / config.CANVAS_HEIGHT) * 100;
-      elements.root.style.left = `${left.toFixed(2)}%`;
-      elements.root.style.top = `${top.toFixed(2)}%`;
+      const canvasX = config.BORDER_LEFT_WIDTH + label.x;
+      const canvasY = config.BORDER_TOP_BOTTOM_HEIGHT + label.y - LABEL_OFFSET_Y;
+      // 3D battlefield: project through its camera; 2D: canvas percentages
+      const projected = battleCamera.isIso() ? battleCamera.canvasToLayer(canvasX, canvasY) : null;
+      if (projected !== null) {
+        elements.root.style.left = `${projected.left.toFixed(1)}px`;
+        elements.root.style.top = `${projected.top.toFixed(1)}px`;
+      } else {
+        elements.root.style.left = `${((canvasX / config.CANVAS_WIDTH) * 100).toFixed(2)}%`;
+        elements.root.style.top = `${((canvasY / config.CANVAS_HEIGHT) * 100).toFixed(2)}%`;
+      }
 
       // Only touch text and colours when something changed
       const key = `${label.name}|${label.slot}|${label.hp}|${label.maxHp}|${label.thinking}|${label.isMe}`;

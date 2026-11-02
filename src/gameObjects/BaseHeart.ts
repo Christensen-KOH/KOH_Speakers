@@ -24,6 +24,10 @@ export class BaseHeart extends GameObject {
     super(64, 64);
   }
 
+  public isDestroyed(): boolean {
+    return this.isDead;
+  }
+
   public explode(): void {
     if (this.isDead) {
       return;

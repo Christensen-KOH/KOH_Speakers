@@ -10,6 +10,13 @@ export interface CameraFocus {
   moving: boolean;
 }
 
+/** A 3D view of the battlefield that can take over pointer/label mapping. */
+export interface WorldProjector {
+  isActive(): boolean;
+  clientToField(clientX: number, clientY: number): { x: number; y: number } | null;
+  fieldToStage(x: number, y: number): { left: number; top: number } | null;
+}
+
 interface Spark {
   x: number;
   y: number;
@@ -58,6 +65,32 @@ class BattleCamera {
   private ty = 0;
   private lastTime = 0;
   private active = false;
+  // Between Hud.show() and Hud.hide(): a battle is on screen
+  private battle = false;
+  private focus: { x: number; y: number } | null = null;
+  private projector: WorldProjector | null = null;
+
+  public setProjector(projector: WorldProjector): void {
+    this.projector = projector;
+  }
+
+  public startBattle(): void {
+    this.battle = true;
+  }
+
+  public isBattle(): boolean {
+    return this.battle;
+  }
+
+  /** Last followed tank centre in field coordinates. */
+  public getFocus(): { x: number; y: number } | null {
+    return this.focus;
+  }
+
+  /** The 3D view draws the battle instead of the 2D canvas. */
+  public isIso(): boolean {
+    return this.projector !== null && this.projector.isActive();
+  }
 
   public attach(canvas: HTMLCanvasElement, stage: HTMLElement, layer: HTMLElement): void {
     this.canvas = canvas;
@@ -84,6 +117,8 @@ class BattleCamera {
 
     this.setFullmap(document.documentElement.classList.contains(TOUCH_UI_CLASS));
 
+    this.focus = { x: focus.x, y: focus.y };
+
     const px = config.BORDER_LEFT_WIDTH + focus.x;
     const py = config.BORDER_TOP_BOTTOM_HEIGHT + focus.y;
     if (!this.active) {
@@ -103,6 +138,8 @@ class BattleCamera {
   /** Level ended: back to the whole arena. */
   public reset(): void {
     this.active = false;
+    this.battle = false;
+    this.focus = null;
     this.lastTime = 0;
     this.setFullmap(false);
     this.sparks.length = 0;
@@ -116,6 +153,12 @@ class BattleCamera {
   public clientToCanvas(clientX: number, clientY: number): { x: number; y: number } | null {
     if (this.stage === null) {
       return null;
+    }
+    if (this.isIso()) {
+      const field = this.projector.clientToField(clientX, clientY);
+      return field === null
+        ? null
+        : { x: config.BORDER_LEFT_WIDTH + field.x, y: config.BORDER_TOP_BOTTOM_HEIGHT + field.y };
     }
     const rect = this.stage.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) {
@@ -131,6 +174,12 @@ class BattleCamera {
 
   /** Canvas px -> position inside the UI layer (CSS px), through the camera. */
   public canvasToLayer(x: number, y: number): { left: number; top: number } | null {
+    if (this.isIso()) {
+      return this.projector.fieldToStage(
+        x - config.BORDER_LEFT_WIDTH,
+        y - config.BORDER_TOP_BOTTOM_HEIGHT,
+      );
+    }
     if (this.stage === null || this.baseW === 0) {
       return null;
     }
@@ -163,7 +212,8 @@ class BattleCamera {
     const sh = this.baseH * z;
     this.tx = Math.min(0, Math.max(w - sw, w / 2 - (this.cx / config.CANVAS_WIDTH) * sw));
     this.ty = Math.min(0, Math.max(h - sh, h / 2 - (this.cy / config.CANVAS_HEIGHT) * sh));
-    const moved = this.fullmap || z !== 1;
+    // The 3D view has its own camera: 2D layers stay put
+    const moved = (this.fullmap || z !== 1) && !this.isIso();
     const transform = moved
       ? `translate(${this.tx.toFixed(1)}px, ${this.ty.toFixed(1)}px) scale(${z})`
       : '';

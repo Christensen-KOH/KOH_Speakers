@@ -136,3 +136,23 @@
   pointer-events: none;
   image-rendering: pixelated;
 }
+
+/* 3D battlefield (IsoWorldRenderer): a WebGL canvas fills the stage, which
+   already spans 100dvw x 100dvh minus the top bar (or the whole screen in
+   touch full-screen). The 2D canvas and spark layer step aside. */
+.tk-stage > canvas.tk-iso-canvas {
+  position: absolute;
+  inset: 0;
+  display: none;
+  width: 100%;
+  height: 100%;
+  image-rendering: auto;
+}
+
+.tk-iso .tk-stage > canvas.tk-iso-canvas {
+  display: block;
+}
+
+.tk-iso .tk-stage > canvas:not(.tk-iso-canvas) {
+  visibility: hidden;
+}

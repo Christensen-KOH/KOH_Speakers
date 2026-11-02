@@ -83,6 +83,7 @@ export class Hud {
   }
 
   public show(playerCount: number): void {
+    battleCamera.startBattle();
     this.players = [];
     this.bar.replaceChildren();
     this.bar.classList.toggle('is-multi', playerCount > 1);

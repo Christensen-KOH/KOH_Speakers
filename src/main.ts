@@ -43,6 +43,8 @@ import {
   UiRoot,
 } from './ui';
 import { ScreenShake, TankSpriteTinter } from './entities';
+import { IsoWorldRenderer } from './render3d/IsoWorldRenderer';
+import { battleCamera } from './ui/Camera';
 
 import * as config from './config';
 
@@ -103,6 +105,10 @@ match.setSettings(new MatchSettingsStore().load());
 const screenShake = new ScreenShake();
 
 const uiRoot = new UiRoot(gameRenderer.getDomElement());
+
+// Battles render as an isometric 3D scene; menus stay on the 2D canvas
+const isoRenderer = new IsoWorldRenderer(uiRoot.getStage());
+battleCamera.setProjector(isoRenderer);
 
 const kitLibrary = new KitLibrary();
 
@@ -294,9 +300,16 @@ gameLoop.tick.addListener((event) => {
   scene.invokeUpdate(updateArgs);
 
   gameRenderer.render(scene.getRoot());
+  // Mirrors the same game objects onto 3D meshes while a battle is on
+  isoRenderer.render(scene.getRoot(), battleCamera.isBattle(), battleCamera.getFocus());
 
   screenShake.update(event.deltaTime);
-  gameRenderer.getDomElement().style.transform = screenShake.getTransform();
+  const shake = screenShake.getTransform();
+  gameRenderer.getDomElement().style.transform = shake;
+  const isoCanvas = isoRenderer.getDomElement();
+  if (isoCanvas !== null) {
+    isoCanvas.style.transform = shake;
+  }
 
   gameState.update();
 
