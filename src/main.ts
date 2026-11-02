@@ -34,6 +34,7 @@ import { Match, MatchSettingsStore, toEconomySettings } from './match';
 import {
   AdaptiveControls,
   CommandHub,
+  GamepadHub,
   Hud,
   OverlayGate,
   TeacherStudio,
@@ -144,6 +145,14 @@ const commandHub = new CommandHub(
   uiRoot.getLayer(),
   hud,
   overlayGate,
+  questionController,
+  shopController,
+);
+// Controllers: Start / Y toggle the Hub, D-pad + A answer inside it
+const gamepadHub = new GamepadHub(
+  uiRoot.getLayer(),
+  overlayGate,
+  commandHub,
   questionController,
   shopController,
 );
@@ -274,6 +283,7 @@ gameLoop.tick.addListener((event) => {
   stats.begin();
 
   inputManager.update();
+  gamepadHub.update();
 
   updateArgs.deltaTime = event.deltaTime;
 

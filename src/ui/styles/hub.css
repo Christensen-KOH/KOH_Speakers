@@ -71,3 +71,10 @@
   padding-top: 8px;
   overflow-y: auto;
 }
+
+/* Controller highlight in the Hub (GamepadHub) */
+.tk-pad-focus {
+  outline: 3px solid #ffd54a !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(255, 213, 74, 0.35);
+}

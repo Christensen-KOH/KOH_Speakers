@@ -1,5 +1,6 @@
 export * from './CanvasPointer';
 export * from './CommandHub';
+export * from './GamepadHub';
 export * from './Fullscreen';
 export * from './TeacherStudio';
 export * from './TopBar';
