@@ -6,7 +6,7 @@ import { BorderWall } from '../BorderWall';
 
 export class EditorBorder extends GameObject {
   protected setup(): void {
-    config.BORDER_RECTS.forEach((rect) => {
+    config.EDITOR_BORDER_RECTS.forEach((rect) => {
       const wall = new BorderWall(rect.width, rect.height);
       wall.tags = [Tag.EditorBlockMove];
       wall.position.set(rect.x, rect.y);

@@ -1,3 +1,4 @@
+import type { RenderCamera, RenderView } from '../core/GameRenderer';
 import * as config from '../config';
 
 import { TOUCH_UI_CLASS } from './touchUi';
@@ -10,13 +11,6 @@ export interface CameraFocus {
   moving: boolean;
 }
 
-/** A 3D view of the battlefield that can take over pointer/label mapping. */
-export interface WorldProjector {
-  isActive(): boolean;
-  clientToField(clientX: number, clientY: number): { x: number; y: number } | null;
-  fieldToStage(x: number, y: number): { left: number; top: number } | null;
-}
-
 interface Spark {
   x: number;
   y: number;
@@ -26,98 +20,69 @@ interface Spark {
   color: string;
 }
 
-// Touch screens: the battlefield covers the whole viewport (Gimkit-style)
-// and scrolls with the player; desktop keeps the whole arena in view.
+// Touch screens: Gimkit-style compact HUD and a tighter view of the arena
 export const FULLMAP_CLASS = 'tk-fullmap';
 // Camera catches up with the tank at roughly this rate (per second).
 const FOLLOW_RATE = 6;
+// Zoom steps of 1/16: 16px terrain tiles then land on whole device pixels,
+// so the unsmoothed sprites never show seams.
+const ZOOM_STEP = 16;
 const SPARK_LIFE = 0.4;
 const SPARK_COLORS = ['#ffcf3d', '#ff8a2a', '#e8ecf8'];
 const MAX_SPARKS = 60;
 
+function snapZoom(zoom: number): number {
+  return Math.max(1, Math.floor(zoom * ZOOM_STEP)) / ZOOM_STEP;
+}
+
 /**
- * Smooth follow camera for the battlefield. The canvas, the DOM name tags and
- * the spark layer share one CSS transform, so everything stays aligned while
- * the world scrolls; pointer input is mapped back through `clientToCanvas`.
- * Also draws an exhaust spark trail behind the moving player tank.
- *
- * On touch screens the battle goes full-screen (`tk-fullmap` on <html>): the
- * stage fills the viewport and the canvas is scaled to cover it, keeping its
- * aspect ratio, so the camera always has map to scroll in both directions.
+ * Gimkit-style roaming camera. The canvas fills the stage at device
+ * resolution; during a battle the world is drawn through
+ * `ctx.translate(-camera.x, -camera.y)` with the camera lerping after the
+ * local player's tank, while menus and notices are letterboxed to the classic
+ * 1024x896 screen. DOM name tags and popups map through `canvasToLayer`,
+ * pointer input back through `clientToCanvas`. Also draws an exhaust spark
+ * trail behind the moving player tank.
  */
 class BattleCamera {
   private stage: HTMLElement | null = null;
-  private layer: HTMLElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
-  private readonly fx = document.createElement('canvas');
-  private fxContext: CanvasRenderingContext2D | null = null;
   private readonly sparks: Spark[] = [];
 
-  // Camera centre in canvas px.
+  // Camera centre in canvas (world) px.
   private cx = config.CANVAS_WIDTH / 2;
   private cy = config.CANVAS_HEIGHT / 2;
-  private readonly zoom = 1;
-  // Displayed canvas size before zoom (CSS px); equals the stage unless full-screen.
-  private baseW = 0;
-  private baseH = 0;
-  private fullmap = false;
-  private tx = 0;
-  private ty = 0;
   private lastTime = 0;
   private active = false;
-  // Between Hud.show() and Hud.hide(): a battle is on screen
-  private battle = false;
-  private focus: { x: number; y: number } | null = null;
-  private projector: WorldProjector | null = null;
+  private fullmap = false;
+  private view: RenderView = {
+    width: 1,
+    height: 1,
+    world: { zoom: 1, x: 0, y: 0 },
+    screen: { zoom: 1, x: 0, y: 0 },
+  };
 
-  public setProjector(projector: WorldProjector): void {
-    this.projector = projector;
-  }
-
-  public startBattle(): void {
-    this.battle = true;
-  }
-
-  public isBattle(): boolean {
-    return this.battle;
-  }
-
-  /** Last followed tank centre in field coordinates. */
-  public getFocus(): { x: number; y: number } | null {
-    return this.focus;
-  }
-
-  /** The 3D view draws the battle instead of the 2D canvas. */
-  public isIso(): boolean {
-    return this.projector !== null && this.projector.isActive();
-  }
-
-  public attach(canvas: HTMLCanvasElement, stage: HTMLElement, layer: HTMLElement): void {
+  public attach(canvas: HTMLCanvasElement, stage: HTMLElement): void {
     this.canvas = canvas;
     this.stage = stage;
-    this.layer = layer;
-    this.fx.width = canvas.width;
-    this.fx.height = canvas.height;
-    this.fx.className = 'tk-fx';
-    this.fxContext = this.fx.getContext('2d');
-    if (this.fxContext) {
-      this.fxContext.imageSmoothingEnabled = false;
-    }
-    stage.insertBefore(this.fx, layer);
+  }
+
+  /** A battle is starting: look at the base until the player tank shows up. */
+  public startBattle(): void {
+    this.setFullmap(document.documentElement.classList.contains(TOUCH_UI_CLASS));
+    this.cx = config.BORDER_LEFT_WIDTH + config.BASE_DEFAULT_POSITION.x + 64;
+    this.cy = config.BORDER_TOP_BOTTOM_HEIGHT + config.BASE_DEFAULT_POSITION.y + 48;
+    this.lastTime = 0;
+    this.active = true;
   }
 
   /** Called every frame with the local player's tank. */
   public follow(focus: CameraFocus): void {
-    if (this.stage === null) {
-      return;
-    }
     const now = performance.now();
     const dt = this.lastTime === 0 ? 0.016 : Math.min(0.1, (now - this.lastTime) / 1000);
     this.lastTime = now;
 
     this.setFullmap(document.documentElement.classList.contains(TOUCH_UI_CLASS));
-
-    this.focus = { x: focus.x, y: focus.y };
 
     const px = config.BORDER_LEFT_WIDTH + focus.x;
     const py = config.BORDER_TOP_BOTTOM_HEIGHT + focus.y;
@@ -132,60 +97,112 @@ class BattleCamera {
     }
 
     this.updateSparks(focus, dt, px, py);
-    this.apply();
   }
 
-  /** Level ended: back to the whole arena. */
+  /** Level ended: back to the menu screen. */
   public reset(): void {
     this.active = false;
-    this.battle = false;
-    this.focus = null;
     this.lastTime = 0;
     this.setFullmap(false);
     this.sparks.length = 0;
-    this.fxContext?.clearRect(0, 0, this.fx.width, this.fx.height);
     this.cx = config.CANVAS_WIDTH / 2;
     this.cy = config.CANVAS_HEIGHT / 2;
-    this.apply();
   }
 
-  /** Screen point -> canvas px, through the camera transform. */
-  public clientToCanvas(clientX: number, clientY: number): { x: number; y: number } | null {
+  /** Called once per frame by the game loop, before rendering. */
+  public getView(): RenderView {
     if (this.stage === null) {
+      return this.view;
+    }
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = Math.max(1, this.stage.clientWidth);
+    const cssH = Math.max(1, this.stage.clientHeight);
+    const width = Math.round(cssW * dpr);
+    const height = Math.round(cssH * dpr);
+
+    // Classic screen, letterboxed and centred
+    const fit = Math.min(width / config.CANVAS_WIDTH, height / config.CANVAS_HEIGHT);
+    const screen = this.centred(
+      snapZoom(fit),
+      width,
+      height,
+      config.CANVAS_WIDTH / 2,
+      config.CANVAS_HEIGHT / 2,
+    );
+
+    let world = screen;
+    if (this.active) {
+      // Desktop shows as much as the classic screen did; touch fills the
+      // screen so the tank stays big under the thumbs.
+      const cover = Math.max(width / config.CANVAS_WIDTH, height / config.CANVAS_HEIGHT);
+      const zoom = snapZoom(this.fullmap ? cover : fit);
+      const viewW = width / zoom;
+      const viewH = height / zoom;
+      const cx = this.clampAxis(this.cx, viewW, config.WORLD_WIDTH);
+      const cy = this.clampAxis(this.cy, viewH, config.WORLD_HEIGHT);
+      world = this.centred(zoom, width, height, cx, cy);
+    }
+
+    this.view = {
+      width,
+      height,
+      world,
+      screen,
+      drawWorldFx: this.sparks.length > 0 ? this.drawSparks : undefined,
+    };
+    return this.view;
+  }
+
+  /** Screen point -> canvas (world) px, through the camera. */
+  public clientToCanvas(clientX: number, clientY: number): { x: number; y: number } | null {
+    if (this.canvas === null) {
       return null;
     }
-    if (this.isIso()) {
-      const field = this.projector.clientToField(clientX, clientY);
-      return field === null
-        ? null
-        : { x: config.BORDER_LEFT_WIDTH + field.x, y: config.BORDER_TOP_BOTTOM_HEIGHT + field.y };
-    }
-    const rect = this.stage.getBoundingClientRect();
+    const rect = this.canvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) {
       return null;
     }
-    const scaledW = (this.baseW || rect.width) * this.zoom;
-    const scaledH = (this.baseH || rect.height) * this.zoom;
+    const { world } = this.view;
+    const scale = this.view.width / rect.width;
     return {
-      x: ((clientX - rect.left - this.tx) / scaledW) * config.CANVAS_WIDTH,
-      y: ((clientY - rect.top - this.ty) / scaledH) * config.CANVAS_HEIGHT,
+      x: world.x + ((clientX - rect.left) * scale) / world.zoom,
+      y: world.y + ((clientY - rect.top) * scale) / world.zoom,
     };
   }
 
-  /** Canvas px -> position inside the UI layer (CSS px), through the camera. */
+  /** Canvas (world) px -> position inside the UI layer (CSS px). */
   public canvasToLayer(x: number, y: number): { left: number; top: number } | null {
-    if (this.isIso()) {
-      return this.projector.fieldToStage(
-        x - config.BORDER_LEFT_WIDTH,
-        y - config.BORDER_TOP_BOTTOM_HEIGHT,
-      );
-    }
-    if (this.stage === null || this.baseW === 0) {
+    if (this.stage === null || this.stage.clientWidth === 0) {
       return null;
     }
+    const { world } = this.view;
+    const scale = this.stage.clientWidth / this.view.width;
     return {
-      left: this.tx + (x / config.CANVAS_WIDTH) * this.baseW * this.zoom,
-      top: this.ty + (y / config.CANVAS_HEIGHT) * this.baseH * this.zoom,
+      left: (x - world.x) * world.zoom * scale,
+      top: (y - world.y) * world.zoom * scale,
+    };
+  }
+
+  // Keeps the view inside the world; a world smaller than the view is centred.
+  private clampAxis(centre: number, viewSize: number, worldSize: number): number {
+    if (viewSize >= worldSize) {
+      return worldSize / 2;
+    }
+    return Math.min(worldSize - viewSize / 2, Math.max(viewSize / 2, centre));
+  }
+
+  // Camera with `zoom` centred on (cx, cy), snapped to whole device pixels.
+  private centred(
+    zoom: number,
+    width: number,
+    height: number,
+    cx: number,
+    cy: number,
+  ): RenderCamera {
+    return {
+      zoom,
+      x: Math.round(cx * zoom - width / 2) / zoom,
+      y: Math.round(cy * zoom - height / 2) / zoom,
     };
   }
 
@@ -197,49 +214,7 @@ class BattleCamera {
     document.documentElement.classList.toggle(FULLMAP_CLASS, fullmap);
   }
 
-  private apply(): void {
-    if (this.stage === null || this.canvas === null || this.layer === null) {
-      return;
-    }
-    const w = this.stage.clientWidth;
-    const h = this.stage.clientHeight;
-    const z = this.zoom;
-    // Full-screen: cover the viewport; otherwise the stage already has the canvas aspect.
-    const cover = this.fullmap ? Math.max(w / config.CANVAS_WIDTH, h / config.CANVAS_HEIGHT) : 0;
-    this.baseW = this.fullmap ? config.CANVAS_WIDTH * cover : w;
-    this.baseH = this.fullmap ? config.CANVAS_HEIGHT * cover : h;
-    const sw = this.baseW * z;
-    const sh = this.baseH * z;
-    this.tx = Math.min(0, Math.max(w - sw, w / 2 - (this.cx / config.CANVAS_WIDTH) * sw));
-    this.ty = Math.min(0, Math.max(h - sh, h / 2 - (this.cy / config.CANVAS_HEIGHT) * sh));
-    // The 3D view has its own camera: 2D layers stay put
-    const moved = (this.fullmap || z !== 1) && !this.isIso();
-    const transform = moved
-      ? `translate(${this.tx.toFixed(1)}px, ${this.ty.toFixed(1)}px) scale(${z})`
-      : '';
-    const origin = moved ? '0 0' : '';
-    const width = this.fullmap ? `${this.baseW.toFixed(1)}px` : '';
-    const height = this.fullmap ? `${this.baseH.toFixed(1)}px` : '';
-
-    const targets: HTMLElement[] = [this.canvas, this.fx];
-    this.layer.querySelectorAll<HTMLElement>('.tk-tags').forEach((node) => targets.push(node));
-    targets.forEach((node) => {
-      if (node.style.transform !== transform) {
-        node.style.transform = transform;
-        node.style.transformOrigin = origin;
-      }
-      if (node.style.width !== width) {
-        node.style.width = width;
-        node.style.height = height;
-      }
-    });
-  }
-
   private updateSparks(focus: CameraFocus, dt: number, px: number, py: number): void {
-    const context = this.fxContext;
-    if (context === null) {
-      return;
-    }
     if (focus.moving && this.sparks.length < MAX_SPARKS) {
       // Behind the tank: opposite of its facing
       const rad = (focus.rotation * Math.PI) / 180;
@@ -257,7 +232,6 @@ class BattleCamera {
       }
     }
 
-    context.clearRect(0, 0, this.fx.width, this.fx.height);
     for (let i = this.sparks.length - 1; i >= 0; i -= 1) {
       const spark = this.sparks[i];
       spark.life -= dt;
@@ -267,13 +241,18 @@ class BattleCamera {
       }
       spark.x += spark.vx * dt;
       spark.y += spark.vy * dt;
+    }
+  }
+
+  private drawSparks = (context: NativeContext): void => {
+    for (const spark of this.sparks) {
       const size = 2 + Math.round((spark.life / SPARK_LIFE) * 4);
       context.globalAlpha = spark.life / SPARK_LIFE;
       context.fillStyle = spark.color;
       context.fillRect(Math.round(spark.x), Math.round(spark.y), size, size);
     }
     context.globalAlpha = 1;
-  }
+  };
 }
 
 export const battleCamera = new BattleCamera();

@@ -5,45 +5,53 @@ export const TILE_SIZE_SMALL = 16;
 export const TILE_SIZE_MEDIUM = 32;
 export const TILE_SIZE_LARGE = 64;
 
-export const FIELD_TILE_COUNT = 13;
+// Authored maps (and the map editor) use the classic 13x13 board.
+export const MAP_TILE_COUNT = 13;
+export const MAP_SIZE = MAP_TILE_COUNT * TILE_SIZE_LARGE;
+
+// Battles run on an open arena. The authored map is placed bottom-centre,
+// just above the arena's steel border ring (see level/buildArena.ts).
+export const FIELD_TILE_COUNT = 51;
 export const FIELD_SIZE = FIELD_TILE_COUNT * TILE_SIZE_LARGE;
+export const MAP_OFFSET = {
+  x: ((FIELD_TILE_COUNT - MAP_TILE_COUNT) / 2) * TILE_SIZE_LARGE,
+  y: (FIELD_TILE_COUNT - MAP_TILE_COUNT - 1) * TILE_SIZE_LARGE,
+};
 
 export const BORDER_LEFT_WIDTH = 64;
 export const BORDER_RIGHT_WIDTH = 128;
 export const BORDER_TOP_BOTTOM_HEIGHT = 32;
-export const BORDER_RECTS = [
-  // Top
-  {
-    x: 0,
-    y: 0,
-    width: BORDER_LEFT_WIDTH + FIELD_SIZE + BORDER_RIGHT_WIDTH,
-    height: BORDER_TOP_BOTTOM_HEIGHT,
-  },
-  // Bottom
-  {
-    x: 0,
-    y: FIELD_SIZE + BORDER_TOP_BOTTOM_HEIGHT,
-    width: BORDER_LEFT_WIDTH + FIELD_SIZE + BORDER_RIGHT_WIDTH,
-    height: BORDER_TOP_BOTTOM_HEIGHT,
-  },
-  // Left
-  {
-    x: 0,
-    y: BORDER_TOP_BOTTOM_HEIGHT,
-    width: BORDER_LEFT_WIDTH,
-    height: FIELD_SIZE,
-  },
-  // Right
-  {
-    x: BORDER_LEFT_WIDTH + FIELD_SIZE,
-    y: BORDER_TOP_BOTTOM_HEIGHT,
-    width: BORDER_RIGHT_WIDTH,
-    height: FIELD_SIZE,
-  },
-];
+function borderRects(size: number): Rect[] {
+  const width = BORDER_LEFT_WIDTH + size + BORDER_RIGHT_WIDTH;
+  return [
+    // Top
+    { x: 0, y: 0, width, height: BORDER_TOP_BOTTOM_HEIGHT },
+    // Bottom
+    { x: 0, y: size + BORDER_TOP_BOTTOM_HEIGHT, width, height: BORDER_TOP_BOTTOM_HEIGHT },
+    // Left
+    { x: 0, y: BORDER_TOP_BOTTOM_HEIGHT, width: BORDER_LEFT_WIDTH, height: size },
+    // Right
+    { x: BORDER_LEFT_WIDTH + size, y: BORDER_TOP_BOTTOM_HEIGHT, width: BORDER_RIGHT_WIDTH, height: size },
+  ];
+}
 
-export const CANVAS_WIDTH = FIELD_SIZE + BORDER_LEFT_WIDTH + BORDER_RIGHT_WIDTH;
-export const CANVAS_HEIGHT = FIELD_SIZE + BORDER_TOP_BOTTOM_HEIGHT * 2;
+interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+// Walls around the battle arena and around the editor's map
+export const BORDER_RECTS = borderRects(FIELD_SIZE);
+export const EDITOR_BORDER_RECTS = borderRects(MAP_SIZE);
+
+// Logical screen for menus and on-screen notices; the camera fits it to the
+// viewport. Battles draw the larger world through the follow camera.
+export const CANVAS_WIDTH = MAP_SIZE + BORDER_LEFT_WIDTH + BORDER_RIGHT_WIDTH;
+export const CANVAS_HEIGHT = MAP_SIZE + BORDER_TOP_BOTTOM_HEIGHT * 2;
+export const WORLD_WIDTH = FIELD_SIZE + BORDER_LEFT_WIDTH + BORDER_RIGHT_WIDTH;
+export const WORLD_HEIGHT = FIELD_SIZE + BORDER_TOP_BOTTOM_HEIGHT * 2;
 
 export const BRICK_TILE_SIZE = TILE_SIZE_SMALL;
 export const BRICK_SUPER_TILE_SIZE = TILE_SIZE_MEDIUM;
@@ -71,7 +79,7 @@ export const BOSS_LEVEL_INTERVAL = 5;
 export const GOLD_TANK_BOUNTY = 75;
 export const BOSS_TANK_BOUNTY = 200;
 export const RECHARGE_PAD_FUEL_PER_SECOND = 10;
-export const TURRET_POSITION = { x: 400, y: 704 };
+export const TURRET_POSITION = { x: MAP_OFFSET.x + 400, y: MAP_OFFSET.y + 704 };
 
 export const POWERUP_DURATION = 30;
 export const SHIELD_SPAWN_DURATION = 3.5;
@@ -117,6 +125,7 @@ export const STORAGE_KEY_SETTINGS_SHOW_LEVEL_HINT = 'settings.show-level-hint';
 export const STORAGE_KEY_SETTINGS_SHOW_EDITOR_HINT =
   'settings.show-editor-hint';
 
+// Spawn defaults are in authored-map coordinates
 export const PLAYER_DEFAULT_SPAWN_POSITIONS = [
   { x: 256, y: 768 },
   { x: 512, y: 768 },
@@ -126,7 +135,12 @@ export const ENEMY_DEFAULT_SPAWN_POSITIONS = [
   { x: 768, y: 0 },
   { x: 0, y: 0 },
 ];
-export const BASE_DEFAULT_POSITION = { x: 352, y: 736 };
+// Base in authored-map coordinates (editor, default pads) and in the arena
+export const MAP_BASE_POSITION = { x: 352, y: 736 };
+export const BASE_DEFAULT_POSITION = {
+  x: MAP_OFFSET.x + MAP_BASE_POSITION.x,
+  y: MAP_OFFSET.y + MAP_BASE_POSITION.y,
+};
 export const BASE_DEFAULT_SIZE = { width: 128, height: 96 };
 
 export const MENU_TITLE_DEFAULT_POSITION = {

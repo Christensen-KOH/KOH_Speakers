@@ -10,7 +10,7 @@ export class EditorField extends GameObject {
   private base: Base;
 
   constructor() {
-    super(config.FIELD_SIZE, config.FIELD_SIZE);
+    super(config.MAP_SIZE, config.MAP_SIZE);
   }
 
   protected setup({ collisionSystem }: GameUpdateArgs): void {
@@ -18,8 +18,8 @@ export class EditorField extends GameObject {
     this.base.collider = new BoxCollider(this.base, false);
     this.base.tags = [Tag.EditorBlockMove];
     this.base.position.set(
-      config.BASE_DEFAULT_POSITION.x,
-      config.BASE_DEFAULT_POSITION.y,
+      config.MAP_BASE_POSITION.x,
+      config.MAP_BASE_POSITION.y,
     );
     collisionSystem.register(this.base.collider);
     this.add(this.base);

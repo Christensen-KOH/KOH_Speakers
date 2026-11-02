@@ -9,8 +9,8 @@ import './styles/overlay.css';
 
 /**
  * DOM layer stacked on top of the game canvas. Gimkit-style UI (HUD, question
- * modal, shop, host options, report) mounts into `getLayer()` and scales with
- * the canvas because both live in the same stage box.
+ * modal, shop, host options, report) mounts into `getLayer()`; the canvas and
+ * the layer both fill the same full-viewport stage box.
  */
 export class UiRoot {
   private readonly stage: HTMLDivElement;
@@ -21,13 +21,12 @@ export class UiRoot {
   constructor(canvas: HTMLCanvasElement) {
     this.stage = document.createElement('div');
     this.stage.className = 'tk-stage';
-    this.stage.style.aspectRatio = `${canvas.width} / ${canvas.height}`;
 
     this.layer = document.createElement('div');
     this.layer.className = 'tk-ui-layer';
 
     this.stage.append(canvas, this.layer);
-    battleCamera.attach(canvas, this.stage, this.layer);
+    battleCamera.attach(canvas, this.stage);
 
     this.pointer = new CanvasPointer(canvas);
     enterFullscreenOnFirstTouch();

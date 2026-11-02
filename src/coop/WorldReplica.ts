@@ -29,8 +29,6 @@ import {
 import { TerrainFactory, TerrainType } from '../terrain';
 import * as config from '../config';
 
-import { IsoHint } from '../render3d/IsoHint';
-
 import { blockRegions, changedBlocks } from './grid';
 
 const TANK_SIZE = 64;
@@ -84,8 +82,6 @@ class SpriteObject extends GameObject {
   public px = 0;
   public py = 0;
   public placed = false;
-  // What the 3D battlefield draws for this sprite
-  public iso: IsoHint | null = null;
 
   constructor(size: number, zIndex: number) {
     super(size, size);
@@ -217,7 +213,6 @@ export class WorldReplica {
       config.BASE_DEFAULT_POSITION.y + 64,
       this.sprite(world.baseAlive ? 'base.heart.alive' : 'base.heart.dead'),
     );
-    this.heart.iso = { kind: 'base', dead: !world.baseAlive };
 
     this.syncTanks(world.tanks, deltaTime, local);
     this.syncEnemies(world.enemies, deltaTime);
@@ -297,7 +292,6 @@ export class WorldReplica {
       const color = PLAYER_COLORS[state.slot % PLAYER_COLORS.length];
       const rotation = (mine ? local.r : state.r) as Rotation;
       object.place(x, y, this.sprite(TankSpriteId.create(type, color, rotation, object.frame)));
-      object.iso = { kind: 'tank', color, facing: rotation };
 
       const shieldFrame = Math.floor(this.clock / 0.06) % 2 === 0 ? 'shield.1' : 'shield.2';
       if (state.shield) {
@@ -347,7 +341,6 @@ export class WorldReplica {
       this.animate(object, state.moving, deltaTime);
       const type = new TankType(TankParty.Enemy, state.tier as TankTier);
       object.place(x, y, this.sprite(TankSpriteId.create(type, color, state.r as Rotation, object.frame)));
-      object.iso = { kind: 'tank', color, facing: state.r };
     });
 
     this.enemies.forEach((object, id) => {
@@ -372,7 +365,6 @@ export class WorldReplica {
       }
       object.glide(state.x, state.y, deltaTime);
       object.place(object.px, object.py, this.sprite(`bullet.${rotationName(state.r)}`));
-      object.iso = { kind: 'bullet' };
     });
 
     // A shell that vanished hit something: small puff where it was

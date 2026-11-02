@@ -22,6 +22,7 @@ export class LevelIntroScript extends LevelScript {
       this.world.sceneRoot.size.height,
       false,
     );
+    this.curtain.screenSpace = true;
     this.world.sceneRoot.add(this.curtain);
 
     this.title = new LevelTitle(
@@ -30,6 +31,7 @@ export class LevelIntroScript extends LevelScript {
     );
     this.title.setCenter(this.world.sceneRoot.getSelfCenter());
     this.title.origin.set(0.5, 0.5);
+    this.title.screenSpace = true;
     this.world.sceneRoot.add(this.title);
   }
 

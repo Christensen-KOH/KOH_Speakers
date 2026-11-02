@@ -50,7 +50,7 @@ export function withDefaultPads(
   }
 
   if (!hasType(TerrainType.UpgradePad)) {
-    const { x, y } = config.BASE_DEFAULT_POSITION;
+    const { x, y } = config.MAP_BASE_POSITION;
     const { width, height } = config.BASE_DEFAULT_SIZE;
     const occupied = [
       ...result.map(toRect),

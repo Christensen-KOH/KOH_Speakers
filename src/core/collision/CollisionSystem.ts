@@ -47,6 +47,14 @@ export class CollisionSystem {
           continue;
         }
 
+        const selfBox = selfCollider.getBox();
+        const otherBox = otherCollider.getBox();
+
+        // Cheap box test first: the open arena has thousands of static tiles
+        if (!selfBox.intersectsBox(otherBox)) {
+          continue;
+        }
+
         // Prevent children colliding with parents
         if (otherCollider.object.hasParent(selfCollider.object)) {
           continue;
@@ -55,18 +63,13 @@ export class CollisionSystem {
           continue;
         }
 
-        const selfBox = selfCollider.getBox();
-        const otherBox = otherCollider.getBox();
-
-        if (selfBox.intersectsBox(otherBox)) {
-          // Lazy create collision if we have at least one intersestion
-          if (collision === null) {
-            collision = new Collision(selfCollider, selfBox);
-          }
-
-          const contact = new CollisionContact(otherCollider, otherBox);
-          collision.addContact(contact);
+        // Lazy create collision if we have at least one intersestion
+        if (collision === null) {
+          collision = new Collision(selfCollider, selfBox);
         }
+
+        const contact = new CollisionContact(otherCollider, otherBox);
+        collision.addContact(contact);
       }
 
       if (collision !== null) {

@@ -10,10 +10,10 @@ export class LevelPauseScript extends LevelScript {
   protected setup(): void {
     this.notice = new PauseNotice();
     this.notice.updateMatrix();
-    this.notice.setCenter(this.world.field.getSelfCenter());
+    this.notice.setCenter(this.world.screenField.getSelfCenter());
     this.notice.position.y += 18;
     this.notice.setVisible(false);
-    this.world.field.add(this.notice);
+    this.world.screenField.add(this.notice);
   }
 
   protected update(updateArgs: GameUpdateArgs): void {

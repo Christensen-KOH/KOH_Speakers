@@ -1,18 +1,17 @@
+/* The stage fills the whole viewport under the 48px top bar (no letterbox);
+   the canvas inside is sized to it at device resolution by Camera.ts, which
+   letterboxes menus and scrolls the battle world. dvw/dvh exclude mobile
+   browser bars. */
 .tk-stage {
   position: relative;
   flex: none;
-  /* Fills the screen below the 48px top bar, as large as the width allows.
-     Mobile browsers: dvh/dvw exclude the address bar. */
-  height: min(calc(100vh - var(--tk-topbar-h, 48px)), calc(100vw * 896 / 1024));
-  height: min(
-    calc(100dvh - var(--tk-topbar-h, 48px)),
-    calc(100dvw * 896 / 1024)
-  );
-  max-width: 100dvw;
+  width: 100vw;
+  width: 100dvw;
+  height: calc(100vh - var(--tk-topbar-h, 48px));
+  height: calc(100dvh - var(--tk-topbar-h, 48px));
+  max-width: none;
   overflow: hidden;
-  align-self: center;
-  /* Centre in the space left under the top bar (portrait phones) */
-  margin-block: auto;
+  margin: 0;
 }
 
 .tk-stage > canvas {
@@ -20,22 +19,6 @@
   width: 100%;
   height: 100%;
   image-rendering: pixelated;
-}
-
-/* Desktop / wide screens: no letterbox. The stage fills everything under
-   the top bar and the canvas stretches with it (crisp, unsmoothed pixels);
-   pointer input maps back through Camera.clientToCanvas on both axes. */
-@media (min-width: 768px) {
-  html:not(.tk-fullmap):not(.tk-kb-open) .tk-stage {
-    width: 100vw;
-    width: 100dvw;
-    height: calc(100vh - var(--tk-topbar-h, 48px));
-    height: calc(100dvh - var(--tk-topbar-h, 48px));
-    max-width: none;
-    /* UiRoot sets the canvas aspect ratio inline */
-    aspect-ratio: auto !important;
-    margin: 0;
-  }
 }
 
 /* Overlay sits above the canvas but lets clicks through except on widgets. */
@@ -90,8 +73,8 @@
 }
 
 /* Touch battles (tk-fullmap, set by the camera): Gimkit-style, the battlefield
-   covers the whole screen and everything else floats over it. The canvas is
-   sized and scrolled by Camera.ts. */
+   covers the whole screen (100dvw x 100dvh) and everything else floats over
+   it. */
 .tk-fullmap .tk-stage {
   position: fixed;
   top: 0;
@@ -125,34 +108,4 @@
   width: auto;
   height: 44px;
   background: transparent;
-}
-
-/* Exhaust sparks: same box as the canvas, shares the camera transform */
-.tk-fx {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  image-rendering: pixelated;
-}
-
-/* 3D battlefield (IsoWorldRenderer): a WebGL canvas fills the stage, which
-   already spans 100dvw x 100dvh minus the top bar (or the whole screen in
-   touch full-screen). The 2D canvas and spark layer step aside. */
-.tk-stage > canvas.tk-iso-canvas {
-  position: absolute;
-  inset: 0;
-  display: none;
-  width: 100%;
-  height: 100%;
-  image-rendering: auto;
-}
-
-.tk-iso .tk-stage > canvas.tk-iso-canvas {
-  display: block;
-}
-
-.tk-iso .tk-stage > canvas:not(.tk-iso-canvas) {
-  visibility: hidden;
 }

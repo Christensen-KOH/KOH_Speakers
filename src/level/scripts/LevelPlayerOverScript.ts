@@ -37,9 +37,9 @@ export class LevelPlayerOverScript extends LevelScript {
     this.notice.updateMatrix();
     this.notice.position.setX(SLIDE_POSITIONS[this.playerIndex].startX);
     this.notice.position.setY(
-      this.world.field.size.height - this.notice.size.height,
+      this.world.screenField.size.height - this.notice.size.height,
     );
-    this.world.field.add(this.notice);
+    this.world.screenField.add(this.notice);
 
     this.state = State.Moving;
 

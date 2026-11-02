@@ -10,7 +10,12 @@ export class CanvasRenderContext extends RenderContext {
 
   public init(): void {
     this.context = this.canvas.getContext('2d');
+    // Resizing the canvas resets context state, so init() runs again then
     this.context.imageSmoothingEnabled = false;
+  }
+
+  public getNative(): NativeContext {
+    return this.context;
   }
 
   public drawImage(

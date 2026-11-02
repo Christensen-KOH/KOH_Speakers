@@ -22,6 +22,10 @@ export class RenderObject extends Transform {
 
   protected needsPaint = true;
 
+  // Drawn in screen space (menus, notices) instead of through the follow
+  // camera. Inherited by children.
+  public screenSpace = false;
+
   public canRender(): boolean {
     if (this.painter === null) {
       return false;

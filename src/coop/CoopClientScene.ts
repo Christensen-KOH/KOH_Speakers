@@ -9,6 +9,7 @@ import type { FieldPoint } from '../ui';
 
 import { CoopLocalPlayer, RawControls, SHOP_ACTIONS } from './CoopLocalPlayer';
 import { TankLabels } from './TankLabels';
+import { unpackGrid } from './grid';
 import { WorldReplica } from './WorldReplica';
 
 const INPUT_HEARTBEAT_MS = 200;
@@ -146,7 +147,7 @@ export class CoopClientScene extends GameScene {
     }
     this.latest = world;
     if (world.grid !== undefined) {
-      this.replica.applyGrid(world.grid);
+      this.replica.applyGrid(unpackGrid(world.grid));
       this.connecting.hidden = true;
     }
 

@@ -32,7 +32,7 @@ const LABEL_OFFSET_Y = 44;
 /**
  * Nickname, HP bar and 💭 (question sheet open) floating over each student
  * tank, drawn in the DOM so any name renders crisply. Positions are given in
- * field coordinates and placed in stage percentages.
+ * field coordinates and placed through the camera.
  */
 export class TankLabels {
   private readonly layer = document.createElement('div');
@@ -62,16 +62,14 @@ export class TankLabels {
         this.labels.set(label.id, elements);
       }
 
-      const canvasX = config.BORDER_LEFT_WIDTH + label.x;
-      const canvasY = config.BORDER_TOP_BOTTOM_HEIGHT + label.y - LABEL_OFFSET_Y;
-      // 3D battlefield: project through its camera; 2D: canvas percentages
-      const projected = battleCamera.isIso() ? battleCamera.canvasToLayer(canvasX, canvasY) : null;
-      if (projected !== null) {
-        elements.root.style.left = `${projected.left.toFixed(1)}px`;
-        elements.root.style.top = `${projected.top.toFixed(1)}px`;
-      } else {
-        elements.root.style.left = `${((canvasX / config.CANVAS_WIDTH) * 100).toFixed(2)}%`;
-        elements.root.style.top = `${((canvasY / config.CANVAS_HEIGHT) * 100).toFixed(2)}%`;
+      // Through the follow camera, so the tag rides on the tank
+      const point = battleCamera.canvasToLayer(
+        config.BORDER_LEFT_WIDTH + label.x,
+        config.BORDER_TOP_BOTTOM_HEIGHT + label.y - LABEL_OFFSET_Y,
+      );
+      if (point !== null) {
+        elements.root.style.left = `${point.left.toFixed(1)}px`;
+        elements.root.style.top = `${point.top.toFixed(1)}px`;
       }
 
       // Only touch text and colours when something changed

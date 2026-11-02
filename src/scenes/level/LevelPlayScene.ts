@@ -4,7 +4,6 @@ import {
   DebugTankKitAction,
 } from '../../debug';
 import { ScreenShake } from '../../entities/fx';
-import { withDefaultPads } from '../../entities/pads';
 import { GameUpdateArgs, GameState, Rotation, Session } from '../../game';
 import type { FieldPoint } from '../../ui';
 import { Border, PlayerTank } from '../../gameObjects';
@@ -18,6 +17,7 @@ import type { OverlayGate } from '../../ui';
 import * as config from '../../config';
 
 import { LevelEventBus, LevelScript, LevelWorld } from '../../level';
+import { buildArena } from '../../level/buildArena';
 import {
   LevelEnemyDiedEvent,
   LevelPlayerDiedEvent,
@@ -121,13 +121,12 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.inputManager = inputManager;
     this.session = session;
 
-    const { mapConfig } = this.params;
+    // The authored map, placed inside the open arena
+    const mapConfig = buildArena(this.params.mapConfig, session.getLevelNumber());
 
-    const terrainRegions = withDefaultPads(
+    const tiles = TerrainFactory.createMapFromRegionConfigs(
       mapConfig.getTerrainRegions(),
-      mapConfig.getPlayerSpawnPositions(),
     );
-    const tiles = TerrainFactory.createMapFromRegionConfigs(terrainRegions);
 
     for (const tile of tiles) {
       tile.destroyed.addListener(() => {

@@ -20,9 +20,9 @@ export class LevelGameOverScript extends LevelScript {
   protected setup(): void {
     this.notice = new GameOverNotice();
     this.notice.updateMatrix();
-    this.notice.setCenterX(this.world.field.getSelfCenter().x);
-    this.notice.position.y = this.world.field.size.height + 100;
-    this.world.field.add(this.notice);
+    this.notice.setCenterX(this.world.screenField.getSelfCenter().x);
+    this.notice.position.y = this.world.screenField.size.height + 100;
+    this.world.screenField.add(this.notice);
 
     this.moveBlockTimer.reset(MOVE_BLOCK_DELAY);
     this.moveBlockTimer.done.addListener(this.handleMoveBlockTimer);

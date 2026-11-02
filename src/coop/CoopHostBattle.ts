@@ -1,10 +1,10 @@
 import { GameObject, Rect, Subject } from '../core';
 import { AutoTurret } from '../entities/AutoTurret';
-import { withDefaultPads } from '../entities/pads';
 import { GameUpdateArgs } from '../game';
 import { Border, Bullet, EnemyTank, TankState, TerrainTile } from '../gameObjects';
 import { EMP_DURATION, STEEL_FORTRESS_DURATION } from '../gimkit-economy';
 import { LevelEventBus, LevelScript, LevelWorld } from '../level';
+import { buildArena } from '../level/buildArena';
 import {
   LevelBaseScript,
   LevelEnemyScript,
@@ -21,9 +21,9 @@ import { TankDeathReason } from '../tank';
 import { TerrainFactory } from '../terrain';
 import * as config from '../config';
 
-import { COOP_SPAWNS, CoopPlayersScript } from './CoopPlayersScript';
+import { COOP_MAP_SPAWNS, CoopPlayersScript } from './CoopPlayersScript';
 import { CoopRoster } from './CoopRoster';
-import { encodeGrid, GridTile } from './grid';
+import { encodeGrid, GridTile, packGrid } from './grid';
 
 // A full map keyframe this often, for students who just joined.
 // The map itself only travels when it changes, so this stays rare.
@@ -82,14 +82,11 @@ export class CoopHostBattle {
     root.add(this.world.field);
 
     // Every student spawn must be drivable
-    COOP_SPAWNS.forEach(({ x, y }) => {
+    COOP_MAP_SPAWNS.forEach(({ x, y }) => {
       mapConfig.clearTerrainRect(new Rect(x, y, config.TILE_SIZE_LARGE, config.TILE_SIZE_LARGE));
     });
-    const regions = withDefaultPads(
-      mapConfig.getTerrainRegions(),
-      mapConfig.getPlayerSpawnPositions(),
-    );
-    this.world.field.add(...TerrainFactory.createMapFromRegionConfigs(regions));
+    const arena = buildArena(mapConfig, stage);
+    this.world.field.add(...TerrainFactory.createMapFromRegionConfigs(arena.getTerrainRegions()));
 
     this.playersScript = new CoopPlayersScript(roster);
     this.scripts = [
@@ -103,7 +100,7 @@ export class CoopHostBattle {
       this.playersScript,
     ];
     this.scripts.forEach((script) =>
-      script.invokeInit(this.world, this.eventBus, updateArgs.session, mapConfig),
+      script.invokeInit(this.world, this.eventBus, updateArgs.session, arena),
     );
 
     this.eventBus.enemyDied.addListener((event) => {
@@ -260,7 +257,7 @@ export class CoopHostBattle {
       waiting: this.roster.getWaiting(),
     };
     if (sendGrid) {
-      world.grid = grid;
+      world.grid = packGrid(grid);
     }
     this.events = [];
     return world;

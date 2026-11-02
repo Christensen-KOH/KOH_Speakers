@@ -1,8 +1,8 @@
 import { TerrainType } from '../terrain/TerrainType';
 import * as config from '../config';
 
-// The shared map travels as one string of 52×52 cells of 16px (the brick
-// size), row-major. Bigger tiles (steel, water… 32px; pads 64px) cover
+// The shared map is one string of GRID_SIZE×GRID_SIZE cells of 16px (the
+// brick size), row-major; on the wire it is run-length packed (packGrid). Bigger tiles (steel, water… 32px; pads 64px) cover
 // several cells.
 export const CELL_SIZE = config.BRICK_TILE_SIZE;
 export const GRID_SIZE = config.FIELD_SIZE / CELL_SIZE;
@@ -78,6 +78,28 @@ export function encodeGrid(tiles: GridTile[]): string {
   });
 
   return cells.join('');
+}
+
+/** Run-length packs a grid for the wire: "." x 40 becomes ".40". */
+export function packGrid(grid: string): string {
+  let packed = '';
+  let index = 0;
+  while (index < grid.length) {
+    const char = grid[index];
+    let run = 1;
+    while (grid[index + run] === char) {
+      run += 1;
+    }
+    packed += run > 1 ? `${char}${run}` : char;
+    index += run;
+  }
+  return packed;
+}
+
+export function unpackGrid(packed: string): string {
+  return packed.replace(/(\D)(\d+)/g, (_match, char: string, run: string) =>
+    char.repeat(Number(run)),
+  );
 }
 
 export function cellAt(grid: string, col: number, row: number): string {

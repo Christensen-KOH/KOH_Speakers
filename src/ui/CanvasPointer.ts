@@ -1,9 +1,11 @@
 import { Vector } from '../core/Vector';
 
+import { battleCamera } from './Camera';
+
 /**
  * Mouse/touch position over the game canvas, in canvas pixels. Converts
- * client coordinates through the canvas' on-screen rectangle, so it stays
- * accurate at any browser size or full-screen scale.
+ * client coordinates through the camera, so it stays accurate at any browser
+ * size or full-screen scale.
  *
  * Canvas scenes (menus, stage select, results) poll it once per frame:
  * `wasMoved()` / `wasClicked()` hold for exactly one frame and `endFrame()`
@@ -56,14 +58,11 @@ export class CanvasPointer {
   }
 
   private track(event: PointerEvent): void {
-    const rect = this.canvas.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) {
+    const point = battleCamera.clientToCanvas(event.clientX, event.clientY);
+    if (point === null) {
       return;
     }
-    this.point.set(
-      ((event.clientX - rect.left) / rect.width) * this.canvas.width,
-      ((event.clientY - rect.top) / rect.height) * this.canvas.height,
-    );
+    this.point.set(point.x, point.y);
     this.inside = true;
   }
 

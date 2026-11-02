@@ -11,7 +11,7 @@ const BLINK_DELAY = 0.2;
 const CHAR_WIDTH = 28;
 const CHAR_SPACING = 4;
 
-/** Blinking "WAVE 2/4" / "BOSS WAVE" banner across the middle of the field. */
+/** Blinking "WAVE 2/4" / "BOSS WAVE" banner across the middle of the screen. */
 export class LevelWaveScript extends LevelScript {
   private banner: SpriteText = null;
   private bannerTimer = new Timer();
@@ -50,10 +50,10 @@ export class LevelWaveScript extends LevelScript {
 
     const width = text.length * (CHAR_WIDTH + CHAR_SPACING) - CHAR_SPACING;
     this.banner.position.set(
-      Math.round((config.FIELD_SIZE - width) / 2),
-      Math.round((config.FIELD_SIZE - CHAR_WIDTH) / 2),
+      Math.round((config.MAP_SIZE - width) / 2),
+      Math.round((config.MAP_SIZE - CHAR_WIDTH) / 2),
     );
-    this.world.field.add(this.banner);
+    this.world.screenField.add(this.banner);
 
     this.bannerTimer.reset(BANNER_DURATION);
     this.blinkTimer.reset(BLINK_DELAY);
