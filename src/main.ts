@@ -44,6 +44,7 @@ import {
 } from './ui';
 import { ScreenShake, TankSpriteTinter } from './entities';
 import { battleCamera } from './ui/Camera';
+import { outOfResourceText } from './ui/outOfAmmo';
 
 import * as config from './config';
 
@@ -159,17 +160,18 @@ const gamepadHub = new GamepadHub(
 );
 // Middle-click / mouse side buttons open and close the Hub
 controls.hubToggleRequested.addListener(() => commandHub.toggle(0));
-// Touch: out of shells or fuel pops the Hub, as does 🔥 with no shells
-hud.resourcesEmptied.addListener(() => {
-  if (controls.getMode() === 'touch') {
-    commandHub.show(0);
-  }
+// Running out never pops the Hub (it would interrupt the fight): a small
+// toast says how to reload, and the player opens it when they choose.
+hud.resourcesEmptied.addListener((resource) => {
+  hud.toast(outOfResourceText(resource));
 });
 controls.firePressed.addListener(() => {
   if (hud.isOutOfShells()) {
-    commandHub.show(0);
+    hud.toast(outOfResourceText('shells'));
   }
 });
+// Touch: the bottom-left ⚡ Answer Questions button
+controls.answerRequested.addListener(() => commandHub.toggle(0));
 
 // Teacher Studio: kits, flashcards and class rules, before a game starts
 const teacherStudio = new TeacherStudio({

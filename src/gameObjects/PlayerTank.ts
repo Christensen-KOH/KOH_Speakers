@@ -2,8 +2,13 @@ import { Subject } from '../core';
 import { GameUpdateArgs, Tag } from '../game';
 import { applyLoadout, Loadout, PlayerEconomy } from '../gimkit-economy';
 import {
+  applyDamage,
+  PLAYER_MAX_HP,
+  PLAYER_MAX_SHIELD,
+  HP_PER_SHELL_DAMAGE,
   TankAttributesFactory,
   TankColor,
+  TankDeathReason,
   TankColorFactory,
   TankSkinAnimation,
   TankTier,
@@ -28,6 +33,10 @@ export class PlayerTank extends Tank {
   // Set while a rival player's shell is being applied, so a resulting death
   // can be credited as a knockout.
   public lastHitByPlayer: number | null = null;
+  // Snowbrawl health: Shield (blue) soaks hits before HP (green). Not to be
+  // confused with `shield`, the spawn/power-up bubble that blocks shells.
+  public hp = PLAYER_MAX_HP;
+  public armor = 0;
 
   /** Makes this a co-op student's tank (call before it is added). */
   public setRemoteLoadout(loadout: Loadout): void {
@@ -51,6 +60,10 @@ export class PlayerTank extends Tank {
       : (economy.getPlayer(this.partyIndex) ?? null);
     this.isBrawl = updateArgs.match.isBrawl();
     this.refreshLoadout();
+    // Heavy Armor: every life starts with a full Shield
+    if (this.getLoadout()?.heavyArmor) {
+      this.armor = PLAYER_MAX_SHIELD;
+    }
 
     // Player only has one color
     this.colors.push(TankColorFactory.createPlayerColor(this.partyIndex));
@@ -88,10 +101,7 @@ export class PlayerTank extends Tank {
 
     this.type.increaseTier(targetTier);
 
-    // Keep shop armor hearts that are still left
-    const health = this.attributes.health;
     this.refreshLoadout();
-    this.attributes.health = health;
     this.skinAnimation = this.tierSkinAnimations.get(this.type.tier);
 
     if (notify === true) {
@@ -101,21 +111,57 @@ export class PlayerTank extends Tank {
 
   /**
    * Re-applies shop upgrades on top of the tier attributes. Pass
-   * `armorBought` when Heavy Armor was just purchased mid-life so the new
-   * hearts are added to the current health.
+   * `armorBought` when Heavy Armor was just purchased mid-life so the
+   * Shield fills up right away.
    */
   public refreshLoadout(armorBought = false): void {
-    const health = this.attributes.health;
     const base = TankAttributesFactory.create(this.type);
-    const loadout = this.remoteLoadout ?? this.economy?.loadout ?? null;
+    const loadout = this.getLoadout();
     this.attributes = loadout ? applyLoadout(base, loadout) : base;
 
     if (armorBought) {
-      this.attributes.health = health + (this.attributes.health - base.health);
-    } else if (this.state !== TankState.Uninitialized) {
-      // Mid-life refresh (new weapon/speed) keeps the hearts left.
-      this.attributes.health = health;
+      this.armor = PLAYER_MAX_SHIELD;
     }
+  }
+
+  public isAlive(): boolean {
+    return this.hp > 0;
+  }
+
+  public die(reason: TankDeathReason = TankDeathReason.Bullet, hitterPartyIndex = null): void {
+    this.hp = 0;
+    super.die(reason, hitterPartyIndex);
+  }
+
+  /** Shield Can: returns the Shield actually added. */
+  public addArmor(amount: number): number {
+    const gained = Math.min(amount, PLAYER_MAX_SHIELD - this.armor);
+    this.armor += gained;
+    return gained;
+  }
+
+  /** Repair Bay / med pack: returns the HP actually restored. */
+  public repair(amount: number): number {
+    const gained = Math.min(amount, PLAYER_MAX_HP - this.hp);
+    this.hp += gained;
+    return gained;
+  }
+
+  protected receiveHit(damage: number, hitterPartyIndex: number): void {
+    const health = applyDamage({ hp: this.hp, shield: this.armor }, damage * HP_PER_SHELL_DAMAGE);
+    this.hp = health.hp;
+    this.armor = health.shield;
+
+    this.hit.notify(null);
+
+    if (!this.isAlive()) {
+      this.attributes.health = 0;
+      this.die(TankDeathReason.Bullet, hitterPartyIndex);
+    }
+  }
+
+  private getLoadout(): Loadout | null {
+    return this.remoteLoadout ?? this.economy?.loadout ?? null;
   }
 
   // Tank Brawl: rival shells do real damage instead of stunning.

@@ -88,8 +88,9 @@ function isTypingTarget(target: EventTarget | null): boolean {
  *   left-click + drag) drives toward the cursor, middle-click / side buttons
  *   (or Tab/Q) toggle the Command Hub.
  * - Touch: the map only drives (tap a tile to drive there, hold or drag to
- *   steer); the floating 🔥 button in the bottom-right corner is the only
- *   way to fire, so steering never wastes shells. The Hub button lives in the HUD.
+ *   steer); the 🔥 Fire button in the bottom-right corner is the only way
+ *   to fire, so steering never wastes shells. The ⚡ Answer Questions button
+ *   in the bottom-left corner opens the questions (Gimkit layout).
  *
  * Movement and fire go through the input manager as virtual keys, so menus,
  * rebinding and gameplay need no special cases. Aimed shots are published
@@ -103,6 +104,8 @@ export class AdaptiveControls {
   public readonly hubToggleRequested = new Subject<void>();
   // Touch: the 🔥 button went down.
   public readonly firePressed = new Subject<void>();
+  // Touch: the ⚡ Answer Questions button was tapped.
+  public readonly answerRequested = new Subject<void>();
 
   private readonly input: InputManager;
   private readonly gate: OverlayGate;
@@ -114,7 +117,8 @@ export class AdaptiveControls {
 
   private readonly zones = el('div', 'tk-tz');
   private readonly surface = el('div', 'tk-tz-half');
-  private readonly fireButton = el('button', 'tk-fire-btn', '🔥');
+  private readonly fireButton = el('button', 'tk-fire-btn');
+  private readonly answerButton = el('button', 'tk-answer-btn');
 
   private touchPointer: number | null = null;
   private touchOrigin = { x: 0, y: 0 };
@@ -157,7 +161,11 @@ export class AdaptiveControls {
     this.zones.setAttribute('aria-hidden', 'true');
     this.fireButton.type = 'button';
     this.fireButton.tabIndex = -1;
-    this.zones.append(this.surface, this.fireButton);
+    this.fireButton.append(el('span', 'tk-fire-btn-icon', '🔥'), el('span', 'tk-fire-btn-label', 'Fire'));
+    this.answerButton.type = 'button';
+    this.answerButton.tabIndex = -1;
+    this.answerButton.textContent = '⚡ Answer Questions';
+    this.zones.append(this.surface, this.fireButton, this.answerButton);
 
     this.surface.addEventListener('pointerdown', this.handleTouchDown);
     this.surface.addEventListener('pointermove', this.handleTouchMove);
@@ -169,6 +177,12 @@ export class AdaptiveControls {
     this.fireButton.addEventListener('pointercancel', this.handleFireUp);
     this.fireButton.addEventListener('lostpointercapture', this.handleFireUp);
     this.fireButton.addEventListener('contextmenu', (event) => event.preventDefault());
+    this.answerButton.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      navigator.vibrate?.(8);
+      this.answerRequested.notify(null);
+    });
+    this.answerButton.addEventListener('contextmenu', (event) => event.preventDefault());
 
     document.body.append(this.zones);
 

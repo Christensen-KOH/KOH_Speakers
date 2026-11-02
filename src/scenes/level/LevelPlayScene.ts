@@ -42,6 +42,7 @@ import {
   LevelPowerupScript,
   LevelShopScript,
   LevelSpawnScript,
+  LevelStationScript,
   LevelTurretScript,
   LevelWaveScript,
   LevelWinScript,
@@ -89,6 +90,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private economyScript: LevelEconomyScript;
   private blitzScript: LevelBlitzScript;
   private shopScript: LevelShopScript;
+  private stationScript: LevelStationScript;
 
   protected setup(updateArgs: GameUpdateArgs): void {
     const { collisionSystem, inputManager, session } = updateArgs;
@@ -160,6 +162,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.waveScript = new LevelWaveScript();
     this.economyScript = new LevelEconomyScript();
     this.blitzScript = new LevelBlitzScript();
+    this.stationScript = new LevelStationScript();
     this.shopScript = new LevelShopScript(
       this.baseScript,
       this.enemyScript,
@@ -188,6 +191,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       this.economyScript,
       this.shopScript,
       this.blitzScript,
+      this.stationScript,
     ];
 
     this.allScripts.forEach((script) => {
@@ -222,6 +226,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         this.economyScript,
         this.shopScript,
         this.blitzScript,
+        this.stationScript,
       );
 
       // Questions and shop open once the battle has started

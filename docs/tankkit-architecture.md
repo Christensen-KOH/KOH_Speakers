@@ -237,3 +237,25 @@ it.
   (`InputManager.pressVirtual`), so menus, rebinding and both game types
   work unchanged. Touch layers hide while any panel, the question sheet or
   the shop is open.
+
+## Gimkit Snowbrawl adaptation
+
+Rules live in [GIMKIT_TANK_SPEC.md](../GIMKIT_TANK_SPEC.md).
+
+- **Health** (`tank/tankHealth.ts`, `PlayerTank`): player tanks have 100 HP
+  and up to 50 Shield; Shield soaks hits first, each point of shell damage
+  costs 25. Heavy Armor now starts every life with a full Shield. The HUD
+  shows green HP / blue Shield bars top-left and `TankLabels` draws compact
+  bars over tanks (solo and co-op). Knocked-out players respawn after 3 s
+  (`PLAYER_SPAWN_DELAY`) with a kill-feed line.
+- **Quiz-for-ammo**: running out of shells or fuel never opens the sheet.
+  `ui/outOfAmmo.ts` builds the toast; the sheet opens only from ⚡ Hub,
+  the touch ⚡ Answer Questions button (bottom-left) or Q / Tab. E is no
+  longer a question key: it uses stations.
+- **Stations** (`entities/stations`, `LevelStationScript`, `ui/StationSigns`):
+  Shield Station (Shield Can $20 → +25), Gadgets (next cannon tier, or the
+  full shop) and Repair Bay ($15 → +50 HP after standing still 2 s) in the
+  Central Plaza. Solo / local games only for now.
+- **Host authority**: the co-op host owns HP, Shield and knockouts and
+  broadcasts `armor` with each tank. Cash, shells and answer grading are
+  still client-side (see the spec's section 5 for the target).

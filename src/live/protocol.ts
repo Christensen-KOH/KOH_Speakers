@@ -128,6 +128,8 @@ export interface CoopTankState {
   tier: string;
   hp: number;
   maxHp: number;
+  // Shield points (0..PLAYER_MAX_SHIELD) on top of HP.
+  armor: number;
   moving: boolean;
   thinking: boolean;
   // Shots the host actually fired for this player (clients charge shells).

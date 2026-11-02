@@ -64,7 +64,8 @@ export const PAD_TILE_SIZE = TILE_SIZE_LARGE;
 export const BULLET_WIDTH = 12;
 
 export const PLAYER_FIRST_SPAWN_DELAY = 0;
-export const PLAYER_SPAWN_DELAY = 0;
+// Knocked-out players come back after 3 s (Gimkit Snowbrawl)
+export const PLAYER_SPAWN_DELAY = 3;
 export const ENEMY_FIRST_SPAWN_DELAY = 0.16;
 export const ENEMY_SPAWN_DELAY = 3;
 

@@ -45,8 +45,12 @@
 
 .tk-tag-bar > div {
   height: 100%;
-  background: #ff6b81;
+  background: #2fd06b;
   transform-origin: left;
+}
+
+.tk-tag-bar--shield > div {
+  background: #3ea6ff;
 }
 
 .tk-tag-bar[hidden],

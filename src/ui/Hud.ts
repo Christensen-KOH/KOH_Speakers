@@ -1,5 +1,6 @@
 import * as config from '../config';
 import { Subject } from '../core/Subject';
+import { PLAYER_MAX_HP, PLAYER_MAX_SHIELD } from '../tank/tankHealth';
 
 import { battleCamera } from './Camera';
 
@@ -11,14 +12,19 @@ export interface HudPlayerState {
   fuel: number;
   shells: number;
   streak: number;
-  // Hearts left on the tank (shown with Heavy Armor); 0 hides them.
-  hearts: number;
+  // Tank HP (0..100) and Shield (0..50); both 0 while respawning.
+  hp: number;
+  armor: number;
 }
+
+export type ResourceKind = 'shells' | 'fuel';
 
 export type PopupKind = 'cash' | 'shells' | 'fuel' | 'spend';
 
 const LOW_FUEL = 0.2;
 const POPUP_LIFETIME_MS = 1100;
+const KILL_FEED_LIFETIME_MS = 4000;
+const KILL_FEED_MAX = 4;
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -48,25 +54,40 @@ interface PlayerWidgets {
   fuelFill: HTMLDivElement;
   shells: HTMLSpanElement;
   streak: HTMLSpanElement;
-  hearts: HTMLSpanElement;
+  hpFill: HTMLDivElement;
+  hpText: HTMLSpanElement;
+  armorFill: HTMLDivElement;
+  armorText: HTMLSpanElement;
+}
+
+function setScale(node: HTMLElement, ratio: number): void {
+  const transform = `scaleX(${Math.max(0, Math.min(1, ratio)).toFixed(3)})`;
+  if (node.style.transform !== transform) {
+    node.style.transform = transform;
+  }
 }
 
 /**
- * Top HUD (cash, fuel, shells, streak, hearts, wave), resource alerts,
- * pad toasts and floating "+$10" popups. Rendered every frame by the level;
+ * Top HUD (HP + Shield bars, cash, fuel, shells, streak, wave), resource
+ * alerts, toasts, the kill feed, the station prompt and floating "+$10"
+ * popups. Rendered every frame by the level;
  * DOM writes only happen when a value changes.
  */
 export class Hud {
   // The player clicked the "⚡ Hub" button.
   public readonly hubRequested = new Subject<number>();
   // Player 1 just ran out of shells or fuel.
-  public readonly resourcesEmptied = new Subject<void>();
+  public readonly resourcesEmptied = new Subject<ResourceKind>();
+  // The station prompt was tapped / clicked.
+  public readonly promptActivated = new Subject<void>();
   private readonly container: HTMLElement;
   private readonly bar = el('div', 'tk-hud');
   private readonly wave = el('div', 'tk-hud-wave tk-glass');
   private readonly timer = el('div', 'tk-hud-wave tk-hud-timer tk-glass');
   private readonly alert = el('div', 'tk-hud-alert');
   private readonly toastEl = el('div', 'tk-hud-toast tk-glass');
+  private readonly feed = el('div', 'tk-hud-feed');
+  private readonly prompt = el('button', 'tk-hud-prompt tk-glass');
   private players: PlayerWidgets[] = [];
   // Player 1's last shells / fuel, to notice them running out.
   private lastShells = -1;
@@ -79,7 +100,14 @@ export class Hud {
     this.alert.hidden = true;
     this.toastEl.hidden = true;
     this.alert.setAttribute('role', 'status');
-    container.append(this.bar, this.alert, this.toastEl);
+    this.feed.setAttribute('aria-live', 'polite');
+    this.prompt.type = 'button';
+    this.prompt.hidden = true;
+    this.prompt.addEventListener('click', () => {
+      this.prompt.blur();
+      this.promptActivated.notify(null);
+    });
+    container.append(this.bar, this.alert, this.toastEl, this.feed, this.prompt);
   }
 
   public show(playerCount: number): void {
@@ -109,6 +137,8 @@ export class Hud {
     this.bar.hidden = true;
     this.alert.hidden = true;
     this.toastEl.hidden = true;
+    this.prompt.hidden = true;
+    this.feed.replaceChildren();
   }
 
   public setWave(waveNumber: number, totalWaves: number, hasBoss: boolean): void {
@@ -136,12 +166,16 @@ export class Hud {
     }
 
     if (playerIndex === 0) {
-      const emptied =
-        (state.shells === 0 && this.lastShells > 0) || (state.fuel <= 0 && this.lastFuel > 0);
+      const emptied: ResourceKind | null =
+        state.shells === 0 && this.lastShells > 0
+          ? 'shells'
+          : state.fuel <= 0 && this.lastFuel > 0
+            ? 'fuel'
+            : null;
       this.lastShells = state.shells;
       this.lastFuel = state.fuel;
-      if (emptied) {
-        this.resourcesEmptied.notify(null);
+      if (emptied !== null) {
+        this.resourcesEmptied.notify(emptied);
       }
     }
     setText(widgets.cash, `$${state.cash}`);
@@ -157,10 +191,31 @@ export class Hud {
     widgets.fuel.classList.toggle('is-low', fuel < LOW_FUEL);
     widgets.fuel.title = `Fuel ${Math.round(fuel * 100)}%`;
 
-    setText(
-      widgets.hearts,
-      state.hearts > 5 ? `❤ ${state.hearts}` : state.hearts > 1 ? '❤'.repeat(state.hearts) : '',
-    );
+    setScale(widgets.hpFill, state.hp / PLAYER_MAX_HP);
+    setText(widgets.hpText, String(Math.ceil(state.hp)));
+    setScale(widgets.armorFill, state.armor / PLAYER_MAX_SHIELD);
+    setText(widgets.armorText, String(Math.ceil(state.armor)));
+  }
+
+  /** Live kill feed in the top-right corner; old lines fade out. */
+  public killFeed(text: string): void {
+    const line = el('div', 'tk-hud-feed-line tk-glass', text);
+    this.feed.append(line);
+    while (this.feed.childElementCount > KILL_FEED_MAX) {
+      this.feed.firstElementChild.remove();
+    }
+    window.setTimeout(() => line.remove(), KILL_FEED_LIFETIME_MS);
+  }
+
+  /** Station prompt ("[Tap / Press E] Buy Shield Can"); null hides it. */
+  public setPrompt(text: string | null, busy = false): void {
+    if (text === null) {
+      this.prompt.hidden = true;
+      return;
+    }
+    setText(this.prompt, text);
+    this.prompt.classList.toggle('is-busy', busy);
+    this.prompt.hidden = false;
   }
 
   /** True when player 1 has no shells left. */
@@ -251,10 +306,25 @@ export class Hud {
     shells.title = 'Shells';
     const streak = el('span', 'tk-hud-stat tk-hud-streak');
     streak.title = 'Streak';
-    const hearts = el('span', 'tk-hud-stat tk-hud-hearts');
-    hearts.title = 'Armor hearts';
+    // Snowbrawl health: green HP over blue Shield
+    const health = el('span', 'tk-hud-stat tk-hud-health');
+    const hpRow = el('span', 'tk-hud-meter tk-hud-meter--hp');
+    hpRow.title = 'Health';
+    const hpBar = el('div', 'tk-hud-meter-bar');
+    const hpFill = el('div');
+    hpBar.append(hpFill);
+    const hpText = el('span', 'tk-hud-meter-text');
+    hpRow.append(hpBar, hpText);
+    const armorRow = el('span', 'tk-hud-meter tk-hud-meter--shield');
+    armorRow.title = 'Shield';
+    const armorBar = el('div', 'tk-hud-meter-bar');
+    const armorFill = el('div');
+    armorBar.append(armorFill);
+    const armorText = el('span', 'tk-hud-meter-text');
+    armorRow.append(armorBar, armorText);
+    health.append(hpRow, armorRow);
 
-    group.append(cash, fuel, shells, streak, hearts);
+    group.append(health, cash, fuel, shells, streak);
 
     const hub = el('button', 'tk-hud-hub', '⚡ Hub');
     // Keyboard hint, hidden on touch screens (hud.css)
@@ -266,6 +336,6 @@ export class Hud {
       this.hubRequested.notify(index);
     });
     group.append(hub);
-    return { group, cash, fuel, fuelFill, shells, streak, hearts };
+    return { group, cash, fuel, fuelFill, shells, streak, hpFill, hpText, armorFill, armorText };
   }
 }

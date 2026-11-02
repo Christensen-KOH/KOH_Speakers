@@ -120,7 +120,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     id: ShopItemId.HeavyArmor,
     category: ShopCategory.Chassis,
     name: 'Heavy Armor',
-    description: '+2 hearts: survive two extra hits per life.',
+    description: 'Every life starts with a full 50 Shield.',
     icon: '🛡️',
   },
   {

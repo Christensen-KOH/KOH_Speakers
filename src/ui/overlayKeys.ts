@@ -26,10 +26,7 @@ export function questionKeyPlayer(
   key: string,
   playerCount: number,
 ): number | null {
-  // Single player: E works too (next to WASD)
-  if (playerCount === 1 && key.toLowerCase() === 'e') {
-    return 0;
-  }
+  // E is the station key (Shield Station, Repair Bay, Gadgets)
   return findPlayer(QUESTION_KEYS, key, playerCount);
 }
 

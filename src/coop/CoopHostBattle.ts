@@ -16,8 +16,7 @@ import {
 } from '../level/scripts';
 import { CoopAction, CoopEvent, CoopTankState, CoopWorld } from '../live/protocol';
 import { MapConfig } from '../map';
-import { gameBalance } from '../match/GameBalance';
-import { TankDeathReason } from '../tank';
+import { PLAYER_MAX_HP, TankDeathReason } from '../tank';
 import { TerrainFactory } from '../terrain';
 import * as config from '../config';
 
@@ -120,6 +119,13 @@ export class CoopHostBattle {
       const x = Math.round(event.centerPosition.x);
       const y = Math.round(event.centerPosition.y);
       this.events.push({ k: 'boom', x, y, big: true });
+      // Kill feed: everyone sees who went down
+      const seat = this.roster.bySlot(event.partyIndex);
+      if (seat !== null) {
+        const text = `💥 ${seat.nickname} was knocked out! Back in ${config.PLAYER_SPAWN_DELAY} s`;
+        this.events.push({ k: 'toast', text });
+        this.toast.notify(text);
+      }
     });
     this.eventBus.baseDied.addListener(() => {
       this.baseAlive = false;
@@ -266,7 +272,6 @@ export class CoopHostBattle {
   private collectTanks(): CoopTankState[] {
     return this.roster.getSeats().map((seat) => {
       const tank = this.playersScript.getTank(seat.slot);
-      const maxHp = gameBalance.startingHp + (seat.input.loadout.heavyArmor ? 2 : 0);
       const center = tank ? tank.getCenter() : null;
       return {
         id: seat.playerId,
@@ -275,8 +280,10 @@ export class CoopHostBattle {
         y: center ? Math.round(center.y) : 0,
         r: tank ? tank.rotation : 0,
         tier: tank ? tank.type.tier : 'a',
-        hp: tank ? tank.attributes.health : 0,
-        maxHp,
+        // The host owns HP and Shield; clients only display them
+        hp: tank ? tank.hp : 0,
+        maxHp: PLAYER_MAX_HP,
+        armor: tank ? tank.armor : 0,
         moving: tank ? tank.state === TankState.Moving : false,
         thinking: seat.input.thinking,
         shots: seat.shots,

@@ -62,3 +62,18 @@ export const ARENA_STATIONS: ArenaStation[] = [WEST_STATION_COL, EAST_STATION_CO
     recharge: { col: col + STATION_COLS - 3, row: STATION_ROW + 3 },
   }),
 );
+
+export interface ArenaKiosk {
+  kind: 'gadgets' | 'shield' | 'repair';
+  // Top-left tile of the 64px station
+  col: number;
+  row: number;
+}
+
+// Vending-machine stations in a row across the Central Plaza (between its
+// corner pillars, which sit on rows 18 and 24).
+export const ARENA_KIOSKS: ArenaKiosk[] = [
+  { kind: 'shield', col: 22, row: 21 },
+  { kind: 'gadgets', col: 25, row: 21 },
+  { kind: 'repair', col: 28, row: 21 },
+];

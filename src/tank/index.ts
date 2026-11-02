@@ -15,3 +15,4 @@ export * from './TankSpriteId';
 export * from './TankTier';
 export * from './TankType';
 export * from './TankVariant';
+export * from './tankHealth';

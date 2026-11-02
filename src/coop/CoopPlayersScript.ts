@@ -1,7 +1,6 @@
 import { Timer, Vector } from '../core';
 import { GameUpdateArgs } from '../game';
 import { PlayerTank } from '../gameObjects';
-import { gameBalance } from '../match/GameBalance';
 import { LevelScript } from '../level/LevelScript';
 import { LevelPlayerSpawnCompletedEvent } from '../level/events';
 import { TankFactory, TankParty, TankType } from '../tank';
@@ -31,7 +30,7 @@ export const COOP_SPAWNS = COOP_MAP_SPAWNS.map(({ x, y }) => ({
   y: config.MAP_OFFSET.y + y,
 }));
 
-const RESPAWN_DELAY = 2;
+const RESPAWN_DELAY = config.PLAYER_SPAWN_DELAY;
 const THINKING_SHIELD = 0.6;
 
 interface SlotState {
@@ -133,8 +132,6 @@ export class CoopPlayersScript extends LevelScript {
     const tank = TankFactory.createPlayer(slot, TankType.PlayerA(), new RemoteTankBehavior(seat));
     tank.setRemoteLoadout(seat.input.loadout);
     state.loadoutKey = JSON.stringify(seat.input.loadout);
-    // Teacher Studio: starting HP on top of the classic single hit
-    tank.attributes.health += gameBalance.startingHp - 1;
     tank.updateMatrix();
     tank.setCenter(event.centerPosition);
     tank.updateMatrix();

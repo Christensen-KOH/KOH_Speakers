@@ -218,3 +218,90 @@
 
 .tk-fullmap .tk-hud-alert { top: calc(56px + env(safe-area-inset-top)); }
 .tk-fullmap .tk-hud-toast { top: calc(96px + env(safe-area-inset-top)); }
+
+/* Snowbrawl health: green HP bar over a blue Shield bar, top-left */
+.tk-hud-health {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.18em;
+}
+
+.tk-hud-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-size: 0.7em;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.tk-hud-meter-bar {
+  width: 5.5em;
+  height: 0.7em;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+.tk-hud-meter-bar > div {
+  height: 100%;
+  border-radius: inherit;
+  transform-origin: left;
+  transition: transform 120ms linear;
+}
+
+.tk-hud-meter--hp { color: #2fd06b; }
+.tk-hud-meter--hp .tk-hud-meter-bar > div { background: #2fd06b; }
+.tk-hud-meter--shield { color: #3ea6ff; }
+.tk-hud-meter--shield .tk-hud-meter-bar > div { background: #3ea6ff; }
+.tk-hud-meter-text { min-width: 1.8em; }
+
+/* Kill feed, top-right under the top bar's buttons */
+.tk-hud-feed {
+  position: absolute;
+  top: calc(52px + env(safe-area-inset-top));
+  right: calc(8px + env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  pointer-events: none;
+  font-size: clamp(12px, 1.9cqh, 16px);
+}
+
+.tk-hud-feed-line {
+  padding: 0.3em 0.8em;
+  border-radius: 999px;
+  font-weight: 700;
+  white-space: nowrap;
+  animation: tk-feed-in 160ms ease-out, tk-feed-out 400ms ease-in 3.6s forwards;
+}
+
+@keyframes tk-feed-in { from { opacity: 0; transform: translateX(12px); } }
+@keyframes tk-feed-out { to { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .tk-hud-feed-line { animation: none; }
+}
+
+/* Station prompt: top-centre under the alert, tappable on touch */
+.tk-hud-prompt {
+  position: absolute;
+  top: calc(136px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.5em 1.1em;
+  border: 2px solid rgba(255, 207, 61, 0.8);
+  border-radius: 999px;
+  color: #fff;
+  font: inherit;
+  font-size: clamp(13px, 2.1cqh, 18px);
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 11;
+}
+
+.tk-hud-prompt[hidden] { display: none; }
+.tk-hud-prompt.is-busy { border-color: #3ea6ff; }

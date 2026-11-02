@@ -202,6 +202,7 @@ export class CoopClientScene extends GameScene {
           y: this.replica.getTankCenter(tank.id)?.y ?? tank.y,
           hp: tank.hp,
           maxHp: tank.maxHp,
+          armor: tank.armor ?? 0,
           thinking: tank.thinking,
           isMe: tank.id === myId,
         })),

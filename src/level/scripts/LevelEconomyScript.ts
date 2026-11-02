@@ -1,3 +1,4 @@
+import { TankLabels } from '../../coop/TankLabels';
 import { GameUpdateArgs } from '../../game';
 import { EconomySession, getKillBounty } from '../../gimkit-economy';
 import type { LiveSession } from '../../live';
@@ -5,10 +6,10 @@ import { KNOCKOUT_BOUNTY, Match } from '../../match';
 import { TankDeathReason } from '../../tank';
 import { TankState } from '../../gameObjects';
 import { TerrainType } from '../../terrain';
-import type { Hud, OverlayGate, QuestionController, ShopController } from '../../ui';
+import type { Hud, OverlayGate, ShopController } from '../../ui';
 import { battleCamera } from '../../ui/Camera';
-import { QUESTION_KEY_LABELS } from '../../ui/overlayKeys';
-import { isTouchUi } from '../../ui/touchUi';
+import { outOfResourceText } from '../../ui/outOfAmmo';
+import * as config from '../../config';
 
 import { LevelScript } from '../LevelScript';
 import {
@@ -18,14 +19,14 @@ import {
   LevelWaveStartedEvent,
 } from '../events';
 
-// Pressing fire with no shells opens the sheet, but not again right after
-// the player closed it with the button still held.
-const OUT_OF_SHELLS_REOPEN_MS = 2000;
+// Pressing fire with no shells repeats the toast at most this often.
+const OUT_OF_SHELLS_TOAST_MS = 2000;
 
 /**
- * Connects the economy to the level: HUD, resource alerts, kill bounties,
- * floating rewards, pad behaviour (Upgrade Pad opens the shop) and opening
- * the question sheet when the tank is out of shells.
+ * Connects the economy to the level: HUD (HP + Shield, resources), resource
+ * alerts, kill bounties, the kill feed, floating rewards and HP bars over
+ * the tanks. Running out of shells only shows a toast: the question sheet
+ * opens when the player asks for it (⚡ Answer Questions, Q / Tab).
  */
 export class LevelEconomyScript extends LevelScript {
   private economy: EconomySession;
@@ -33,10 +34,10 @@ export class LevelEconomyScript extends LevelScript {
   private live: LiveSession;
   private hud: Hud;
   private gate: OverlayGate;
-  private questions: QuestionController;
   private shop: ShopController;
   private cleanups: (() => void)[] = [];
-  private lastAutoOpen = -Infinity;
+  private lastEmptyToast = -Infinity;
+  private labels: TankLabels;
   // Players respawn on a Recharge Pad; explain it once per level only.
   private hasShownSafeZoneTip = false;
 
@@ -46,11 +47,11 @@ export class LevelEconomyScript extends LevelScript {
     this.live = updateArgs.liveSession;
     this.hud = updateArgs.hud;
     this.gate = updateArgs.overlayGate;
-    this.questions = updateArgs.questionController;
     this.shop = updateArgs.shopController;
 
     const playerCount = this.session.isMultiplayer() ? 2 : 1;
     this.hud.show(playerCount);
+    this.labels = new TankLabels(updateArgs.uiRoot.getLayer());
 
     this.eventBus.enemyDied.addListener(this.handleEnemyDied);
     this.eventBus.waveStarted.addListener(this.handleWaveStarted);
@@ -66,7 +67,7 @@ export class LevelEconomyScript extends LevelScript {
           this.hud.popupAtStat(index, 'cash', `+$${result.payout.cash}`, 'cash');
           this.hud.popupAtStat(index, 'shells', `+${result.payout.shells}`, 'shells');
         }),
-        player.fireRefused.addListener(() => this.openQuestionsForAmmo(index)),
+        player.fireRefused.addListener(() => this.toastOutOfShells(index)),
       );
     });
 
@@ -76,19 +77,10 @@ export class LevelEconomyScript extends LevelScript {
       }),
     );
 
-    // "Click when out of ammo" also opens the sheet
-    const stage = updateArgs.uiRoot.getStage();
-    const handleClick = (): void => {
-      if (this.economy.getPlayer(0).getShells() === 0) {
-        this.openQuestionsForAmmo(0, true);
-      }
-    };
-    stage.addEventListener('mousedown', handleClick);
-    this.cleanups.push(() => stage.removeEventListener('mousedown', handleClick));
-
     this.gate.detached.addListenerOnce(() => {
       this.cleanups.forEach((cleanup) => cleanup());
       this.cleanups = [];
+      this.labels.destroy();
       this.hud.hide();
     });
   }
@@ -114,7 +106,8 @@ export class LevelEconomyScript extends LevelScript {
         fuel: player.getFuel() / player.getMaxFuel(),
         shells: player.getShells(),
         streak: player.getStreak(),
-        hearts: tank && tank.isAlive() ? tank.attributes.health : 0,
+        hp: tank && tank.isAlive() ? tank.hp : 0,
+        armor: tank && tank.isAlive() ? tank.armor : 0,
       });
 
       if (index === 0 && tank && tank.isAlive()) {
@@ -122,32 +115,47 @@ export class LevelEconomyScript extends LevelScript {
         battleCamera.follow({ x, y, rotation: tank.rotation, moving: tank.state === TankState.Moving });
       }
 
-      const who = playerCount > 1 ? `P${index + 1}: ` : '';
-      const press =
-        isTouchUi() && playerCount === 1
-          ? 'Tap ⚡ Hub to answer questions'
-          : `Press ${QUESTION_KEY_LABELS[index]} or click ⚡ Hub to answer questions`;
       if (player.isOutOfFuel()) {
-        alerts.push(`${who}LOW FUEL! ${press}`);
+        alerts.push(outOfResourceText('fuel', index, playerCount));
       } else if (player.getShells() === 0) {
-        alerts.push(`${who}OUT OF SHELLS! ${press}`);
+        alerts.push(outOfResourceText('shells', index, playerCount));
       }
     }
 
     const alert = alerts.length > 0 ? alerts.join('  ·  ') : null;
     this.hud.setAlert(this.gate.isFree() ? alert : null);
+
+    // Compact HP / Shield bars over each tank
+    this.labels.update(
+      tanks
+        .map((tank, index) => ({ tank, index }))
+        .filter(({ tank }) => tank && tank.isAlive() && !tank.isRemoved)
+        .map(({ tank, index }) => {
+          const { x, y } = tank.getCenter();
+          return {
+            id: `p${index}`,
+            slot: index,
+            name: playerCount > 1 ? `P${index + 1}` : 'You',
+            x,
+            y,
+            hp: tank.hp,
+            maxHp: 100,
+            armor: tank.armor,
+            thinking: false,
+          };
+        }),
+    );
   }
 
-  private openQuestionsForAmmo(playerIndex: number, force = false): void {
+  // Never opens the sheet by itself: a small toast says how to reload
+  private toastOutOfShells(playerIndex: number): void {
     const now = performance.now();
-    if (!force && now - this.lastAutoOpen < OUT_OF_SHELLS_REOPEN_MS) {
+    if (now - this.lastEmptyToast < OUT_OF_SHELLS_TOAST_MS || !this.gate.isFree()) {
       return;
     }
-    if (!this.gate.isFree()) {
-      return;
-    }
-    this.lastAutoOpen = now;
-    this.questions.open(playerIndex);
+    this.lastEmptyToast = now;
+    const playerCount = this.session.isMultiplayer() ? 2 : 1;
+    this.hud.toast(outOfResourceText('shells', playerIndex, playerCount));
   }
 
   private handleEnemyDied = (event: LevelEnemyDiedEvent): void => {
@@ -165,12 +173,20 @@ export class LevelEconomyScript extends LevelScript {
   };
 
   private handlePlayerDied = (event: LevelPlayerDiedEvent): void => {
+    const name = (index: number): string =>
+      this.session.isMultiplayer() ? `P${index + 1}` : 'You';
+    const victim = name(event.partyIndex);
+    const lives = this.session.getPlayer(event.partyIndex);
+    const comeback = lives && lives.isAlive() ? ` · back in ${config.PLAYER_SPAWN_DELAY} s` : '';
+
     const rival = event.knockedOutBy;
     if (rival === null || rival === undefined || rival === event.partyIndex) {
+      this.hud.killFeed(`💥 Enemy tank knocked out ${victim}${comeback}`);
       return;
     }
     this.match.addKnockout(rival);
     this.economy.getPlayer(rival).earn(KNOCKOUT_BOUNTY);
+    this.hud.killFeed(`💥 ${name(rival)} knocked out ${victim}${comeback}`);
     const { x, y } = event.centerPosition;
     this.hud.popupAtField(x, y, `KO! +$${KNOCKOUT_BOUNTY}`, 'cash');
   };

@@ -1,4 +1,5 @@
 import { PLAYER_CSS_COLORS } from '../tank/TankColorFactory';
+import { PLAYER_MAX_SHIELD } from '../tank/tankHealth';
 import { battleCamera } from '../ui/Camera';
 import * as config from '../config';
 
@@ -13,6 +14,8 @@ export interface TankLabel {
   y: number;
   hp: number;
   maxHp: number;
+  // Shield points over HP (blue bar); 0 hides it.
+  armor?: number;
   thinking: boolean;
   isMe?: boolean;
 }
@@ -22,6 +25,8 @@ interface LabelElements {
   name: HTMLSpanElement;
   bar: HTMLDivElement;
   fill: HTMLDivElement;
+  shieldBar: HTMLDivElement;
+  shieldFill: HTMLDivElement;
   bubble: HTMLSpanElement;
   key: string;
 }
@@ -30,7 +35,7 @@ interface LabelElements {
 const LABEL_OFFSET_Y = 44;
 
 /**
- * Nickname, HP bar and 💭 (question sheet open) floating over each student
+ * Nickname, HP bar (green), Shield bar (blue) and 💭 (question sheet open) floating over each student
  * tank, drawn in the DOM so any name renders crisply. Positions are given in
  * field coordinates and placed through the camera.
  */
@@ -73,7 +78,8 @@ export class TankLabels {
       }
 
       // Only touch text and colours when something changed
-      const key = `${label.name}|${label.slot}|${label.hp}|${label.maxHp}|${label.thinking}|${label.isMe}`;
+      const armor = label.armor ?? 0;
+      const key = `${label.name}|${label.slot}|${label.hp}|${label.maxHp}|${armor}|${label.thinking}|${label.isMe}`;
       if (key !== elements.key) {
         elements.key = key;
         elements.name.textContent = label.isMe ? `${label.name} (you)` : label.name;
@@ -83,6 +89,8 @@ export class TankLabels {
         );
         elements.fill.style.transform = `scaleX(${label.maxHp > 0 ? label.hp / label.maxHp : 0})`;
         elements.bar.hidden = label.maxHp <= 1;
+        elements.shieldFill.style.transform = `scaleX(${Math.min(1, armor / PLAYER_MAX_SHIELD)})`;
+        elements.shieldBar.hidden = armor <= 0;
         elements.bubble.hidden = !label.thinking;
         elements.root.classList.toggle('is-me', label.isMe === true);
       }
@@ -118,8 +126,12 @@ export class TankLabels {
     bar.className = 'tk-tag-bar';
     const fill = document.createElement('div');
     bar.append(fill);
-    root.append(bubble, name, bar);
+    const shieldBar = document.createElement('div');
+    shieldBar.className = 'tk-tag-bar tk-tag-bar--shield';
+    const shieldFill = document.createElement('div');
+    shieldBar.append(shieldFill);
+    root.append(bubble, name, shieldBar, bar);
     this.layer.append(root);
-    return { root, name, bar, fill, bubble, key: '' };
+    return { root, name, bar, fill, shieldBar, shieldFill, bubble, key: '' };
   }
 }

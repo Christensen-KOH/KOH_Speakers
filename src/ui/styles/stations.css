@@ -1,0 +1,29 @@
+/* Floating signs over the on-map stations (vending machines) */
+.tk-ui-layer > .tk-station-signs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.tk-station-sign {
+  --tk-station-color: #ffcf3d;
+
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 2px 9px;
+  border: 2px solid var(--tk-station-color);
+  border-radius: 6px;
+  background: rgba(10, 14, 23, 0.78);
+  color: var(--tk-station-color);
+  font-family: var(--tk-font);
+  font-size: max(10px, 1.5cqh);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  will-change: left, top;
+}
+
+.tk-station-sign[hidden] {
+  display: none;
+}

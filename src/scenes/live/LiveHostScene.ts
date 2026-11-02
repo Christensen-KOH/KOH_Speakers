@@ -166,6 +166,7 @@ export class LiveHostScene extends GameScene {
         y: tank.y,
         hp: tank.hp,
         maxHp: tank.maxHp,
+        armor: tank.armor ?? 0,
         thinking: tank.thinking,
       })),
     );

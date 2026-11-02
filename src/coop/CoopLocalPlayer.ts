@@ -13,8 +13,7 @@ import type { TankTier, TankVariant } from '../tank';
 import { TankAttributesFactory } from '../tank/TankAttributesFactory';
 import type { FieldPoint } from '../ui';
 import { battleCamera } from '../ui/Camera';
-import { QUESTION_KEY_LABELS } from '../ui/overlayKeys';
-import { isTouchUi } from '../ui/touchUi';
+import { outOfResourceText } from '../ui/outOfAmmo';
 import { facingFor } from '../tank/omniDrive';
 
 import { LocalPrediction } from './LocalPrediction';
@@ -65,6 +64,7 @@ export class CoopLocalPlayer {
   private tank: CoopTankState | null = null;
   private lastShots: number | null = null;
   private face = -1;
+  private lastEmptyToast = -Infinity;
   private frozenUntil = 0;
   private speedKey = '';
   private speed = 0;
@@ -145,7 +145,7 @@ export class CoopLocalPlayer {
       return;
     }
     if (this.player.getShells() === 0) {
-      this.args.questionController.open(0);
+      this.toastOutOfShells();
       return;
     }
     const origin = this.prediction.isActive() ? this.prediction : tank;
@@ -154,7 +154,7 @@ export class CoopLocalPlayer {
   }
 
   public update(deltaTime: number, raw: RawControls): void {
-    const { overlayGate, controls, questionController } = this.args;
+    const { overlayGate, controls } = this.args;
     const thinking = !overlayGate.isFree();
     const tank = this.tank;
     const canAct = !thinking && !this.isFrozen() && tank !== null;
@@ -197,8 +197,8 @@ export class CoopLocalPlayer {
     let firing = false;
     if (canAct) {
       if (this.player.getShells() === 0 && (raw.pressed || raw.held)) {
-        // Out of shells: off to the questions, Gimkit style
-        questionController.open(0);
+        // Out of shells: a toast says how to reload; the sheet never pops
+        this.toastOutOfShells();
       } else {
         if (raw.pressed) {
           fireSeq += 1;
@@ -245,7 +245,17 @@ export class CoopLocalPlayer {
     );
   }
 
-  /** Cash, fuel, shells, hearts, timer and the out-of-resource warning. */
+  // At most one "out of shells" toast every 2 s while fire is held
+  private toastOutOfShells(): void {
+    const now = performance.now();
+    if (now - this.lastEmptyToast < 2000) {
+      return;
+    }
+    this.lastEmptyToast = now;
+    this.args.hud.toast(outOfResourceText('shells'));
+  }
+
+  /** Cash, fuel, shells, HP + Shield, timer and the out-of-resource warning. */
   public renderHud(): void {
     const { hud, liveSession, overlayGate } = this.args;
     const tank = this.tank;
@@ -254,7 +264,8 @@ export class CoopLocalPlayer {
       fuel: this.player.getFuel() / this.player.getMaxFuel(),
       shells: this.player.getShells(),
       streak: this.player.getStreak(),
-      hearts: tank && tank.alive ? tank.hp : 0,
+      hp: tank && tank.alive ? tank.hp : 0,
+      armor: tank && tank.alive ? tank.armor ?? 0 : 0,
     });
 
     if (tank && tank.alive) {
@@ -267,14 +278,11 @@ export class CoopLocalPlayer {
       hud.setTimer(remaining / 1000, rank ? ` · #${rank.rank}/${rank.of}` : '');
     }
 
-    const press = isTouchUi()
-      ? 'Tap ⚡ to answer questions'
-      : `Press ${QUESTION_KEY_LABELS[0]} to answer questions`;
     let alert: string = null;
     if (this.player.isOutOfFuel()) {
-      alert = `LOW FUEL! ${press}`;
+      alert = outOfResourceText('fuel');
     } else if (this.player.getShells() === 0) {
-      alert = `OUT OF SHELLS! ${press}`;
+      alert = outOfResourceText('shells');
     }
     hud.setAlert(overlayGate.isFree() && tank !== null ? alert : null);
   }
