@@ -1,4 +1,3 @@
-import { ARENA_ZONES } from '../level/arenaLayout';
 import * as config from '../config';
 
 const OUTSIDE = '#1d2532';
@@ -6,12 +5,6 @@ const FLOOR_LIGHT = '#eef2f7';
 const FLOOR_DARK = '#e5ebf2';
 const FLOOR_LINE = '#d5dde8';
 const TILE = config.TILE_SIZE_LARGE;
-const ZONE_FILL_ALPHA = 0.1;
-const ZONE_EDGE_ALPHA = 0.5;
-const ZONE_LABEL_ALPHA = 0.75;
-const ZONE_EDGE_WIDTH = 4;
-const ZONE_RADIUS = 24;
-const LABEL_FONT = 'bold 30px system-ui, -apple-system, "Segoe UI", sans-serif';
 
 let floorTile: HTMLCanvasElement | null = null;
 const patterns = new WeakMap<NativeContext, CanvasPattern>();
@@ -48,28 +41,10 @@ function getPattern(context: NativeContext): CanvasPattern | null {
   return pattern;
 }
 
-function roundedRect(
-  context: NativeContext,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-): void {
-  context.beginPath();
-  context.moveTo(x + radius, y);
-  context.arcTo(x + width, y, x + width, y + height, radius);
-  context.arcTo(x + width, y + height, x, y + height, radius);
-  context.arcTo(x, y + height, x, y, radius);
-  context.arcTo(x, y, x + width, y, radius);
-  context.closePath();
-}
-
 /**
  * Gimkit-style bright arena floor, drawn under every battle object: soft
- * tile checker inside the field, dark slate outside it, and the named zones
- * (Frontline, Central Plaza, Upgrade Stations, Base Plaza) as tinted rooms
- * with dashed borders and floor labels. World (canvas) coordinates.
+ * tile checker inside the field and dark slate outside it. World (canvas)
+ * coordinates.
  */
 export function drawArenaFloor(
   context: NativeContext,
@@ -94,47 +69,5 @@ export function drawArenaFloor(
   const pattern = getPattern(context);
   context.fillStyle = pattern ?? FLOOR_LIGHT;
   context.fillRect(x0 - left, y0 - top, x1 - x0, y1 - y0);
-
-  context.lineWidth = ZONE_EDGE_WIDTH;
-  context.setLineDash([18, 12]);
-  context.font = LABEL_FONT;
-  context.textBaseline = 'top';
-  for (const zone of ARENA_ZONES) {
-    if (
-      zone.x + zone.width < x0 - left ||
-      zone.x > x1 - left ||
-      zone.y + zone.height < y0 - top ||
-      zone.y > y1 - top
-    ) {
-      continue;
-    }
-    const inset = ZONE_EDGE_WIDTH;
-    roundedRect(
-      context,
-      zone.x + inset,
-      zone.y + inset,
-      zone.width - inset * 2,
-      zone.height - inset * 2,
-      ZONE_RADIUS,
-    );
-    context.globalAlpha = ZONE_FILL_ALPHA;
-    context.fillStyle = zone.color;
-    context.fill();
-    context.globalAlpha = ZONE_EDGE_ALPHA;
-    context.strokeStyle = zone.color;
-    context.stroke();
-    context.globalAlpha = ZONE_LABEL_ALPHA;
-    const label = zone.name.toUpperCase();
-    if (context.measureText(label).width > zone.width - 44) {
-      // Narrow strip: read the label down its side
-      context.save();
-      context.translate(zone.x + 22, zone.y + 22);
-      context.rotate(Math.PI / 2);
-      context.fillText(label, 0, -34);
-      context.restore();
-    } else {
-      context.fillText(label, zone.x + 22, zone.y + 18);
-    }
-  }
   context.restore();
 }

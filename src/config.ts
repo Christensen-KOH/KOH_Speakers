@@ -9,14 +9,11 @@ export const TILE_SIZE_LARGE = 64;
 export const MAP_TILE_COUNT = 13;
 export const MAP_SIZE = MAP_TILE_COUNT * TILE_SIZE_LARGE;
 
-// Battles run on an open arena. The authored map is placed bottom-centre,
-// just above the arena's steel border ring (see level/buildArena.ts).
-export const FIELD_TILE_COUNT = 51;
+// Battles run on the authored map itself (see level/buildArena.ts), so the
+// field is the classic board and the map sits at its origin.
+export const FIELD_TILE_COUNT = MAP_TILE_COUNT;
 export const FIELD_SIZE = FIELD_TILE_COUNT * TILE_SIZE_LARGE;
-export const MAP_OFFSET = {
-  x: ((FIELD_TILE_COUNT - MAP_TILE_COUNT) / 2) * TILE_SIZE_LARGE,
-  y: (FIELD_TILE_COUNT - MAP_TILE_COUNT - 1) * TILE_SIZE_LARGE,
-};
+export const MAP_OFFSET = { x: 0, y: 0 };
 
 export const BORDER_LEFT_WIDTH = 64;
 export const BORDER_RIGHT_WIDTH = 128;
