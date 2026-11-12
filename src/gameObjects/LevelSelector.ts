@@ -20,10 +20,11 @@ export class LevelSelector extends GameObject {
   private arrowRight: SpriteText;
   private holdThrottles: InputHoldThrottle[] = [];
 
-  constructor(maxLevel = 1, isPlaytest = false) {
+  constructor(maxLevel = 1, isPlaytest = false, startLevel = 1) {
     super();
 
     this.maxLevel = maxLevel;
+    this.currentLevel = Math.min(Math.max(startLevel, this.minLevel), maxLevel);
     this.isPlaytest = isPlaytest;
 
     this.holdThrottles = [

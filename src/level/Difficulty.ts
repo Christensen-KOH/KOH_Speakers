@@ -27,14 +27,17 @@ export function getExtraEnemyCount(levelNumber: number): number {
 export function scaleEnemyList(
   baseList: TankType[],
   levelNumber: number,
+  // Teacher Studio "enemies per stage" multiplier
+  countFactor = 1,
 ): TankType[] {
-  const list = [...baseList];
   if (baseList.length === 0) {
-    return list;
+    return [];
   }
 
-  const extraCount = getExtraEnemyCount(levelNumber);
-  for (let i = 0; i < extraCount; i += 1) {
+  const rampedCount = baseList.length + getExtraEnemyCount(levelNumber);
+  const totalCount = Math.max(1, Math.round(rampedCount * countFactor));
+  const list: TankType[] = [];
+  for (let i = 0; i < totalCount; i += 1) {
     const type = baseList[i % baseList.length];
     list.push(new TankType(type.party, type.tier, type.hasDrop, type.variant));
   }
@@ -58,9 +61,9 @@ export function getMaxAliveCount(
 }
 
 /** Seconds between enemy spawns: 3 s on stage 1 down to 1.2 s. */
-export function getEnemySpawnDelay(levelNumber: number): number {
+export function getEnemySpawnDelay(levelNumber: number, gapFactor = 1): number {
   const delay = config.ENEMY_SPAWN_DELAY - 0.05 * (Math.max(levelNumber, 1) - 1);
-  return Math.max(delay, config.ENEMY_MIN_SPAWN_DELAY);
+  return Math.max(delay, config.ENEMY_MIN_SPAWN_DELAY) * gapFactor;
 }
 
 /** Enemy movement speed multiplier: creeps up to +20% by stage 41. */

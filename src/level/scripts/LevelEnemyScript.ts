@@ -53,7 +53,7 @@ export class LevelEnemyScript extends LevelScript {
     const baseList = this.mapConfig.getEnemySpawnList();
 
     this.spawnDelay = isRamped
-      ? getEnemySpawnDelay(levelNumber)
+      ? getEnemySpawnDelay(levelNumber, gameBalance.spawnGapFactor)
       : config.ENEMY_SPAWN_DELAY;
     this.speedFactor = isRamped ? getEnemySpeedFactor(levelNumber) : 1;
     this.maxAliveCount = getMaxAliveCount(
@@ -62,7 +62,9 @@ export class LevelEnemyScript extends LevelScript {
     );
 
     this.wavePlan = buildWavePlan(
-      isRamped ? scaleEnemyList(baseList, levelNumber) : baseList,
+      isRamped
+        ? scaleEnemyList(baseList, levelNumber, gameBalance.enemyCountFactor)
+        : baseList,
       levelNumber,
       match.isBlitz() ? BLITZ_GOLD_SLOTS : DEFAULT_GOLD_SLOTS,
       isRamped ? getWaveSize(levelNumber) : config.WAVE_SIZE,

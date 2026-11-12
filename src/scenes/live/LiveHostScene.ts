@@ -11,7 +11,11 @@ import { InputManager } from '../../input';
 import { COOP_TICK_MS, LiveRoomState, LiveSession } from '../../live';
 import { MapConfig } from '../../map';
 import { resetGameBalance, setGameBalance } from '../../match/GameBalance';
-import { loadStudioSettings, toGameBalance } from '../../studio/StudioSettings';
+import {
+  clampStartStage,
+  loadStudioSettings,
+  toGameBalance,
+} from '../../studio/StudioSettings';
 import { cardsFromKit } from '../../studio/flashcards';
 import { FlashcardViewer } from '../../ui/FlashcardViewer';
 import { HostPill } from '../../ui/HostPill';
@@ -231,8 +235,9 @@ export class LiveHostScene extends GameScene {
       });
       session.reset();
       session.setMultiplayer(true);
-      session.start(1, mapLoader.getItemsCount());
-      this.loadStage(1);
+      const startStage = clampStartStage(studio, mapLoader.getItemsCount());
+      session.start(startStage, mapLoader.getItemsCount());
+      this.loadStage(startStage);
     } else if (room.status !== 'playing' && (this.battle !== null || this.loadingStage)) {
       this.stopBattle();
     }

@@ -12,6 +12,7 @@ import { cardsFromKit } from '../studio/flashcards';
 import { parseKitText, slug } from '../studio/kitText';
 import {
   DEFAULT_STUDIO_SETTINGS,
+  ENEMY_COUNT_OPTIONS,
   EnemySpeed,
   HP_OPTIONS,
   loadStudioSettings,
@@ -107,6 +108,8 @@ export interface TeacherStudioOptions {
   onLaunch: (kitId: string) => void;
   // Keyboard capture for the game is paused while the studio is open.
   onOpenChanged?: (open: boolean) => void;
+  // Number of stages, for the "starting stage" knob.
+  stageCount?: number;
 }
 
 /**
@@ -142,7 +145,7 @@ export class TeacherStudio {
     this.root.setAttribute('aria-label', 'Teacher Studio');
 
     this.launchButton = button(
-      '🚀 Launch Live Game with This Kit',
+      '🚀 Host Live Game with This Kit & Settings',
       'tk-st-btn tk-st-btn--go',
       () => this.launch(),
     );
@@ -814,7 +817,7 @@ export class TeacherStudio {
       el(
         'p',
         'tk-st-note',
-        'Saved on this device and applied automatically to every live game you host, including “Launch Live Game”.',
+        'Saved on this device and applied automatically to every live game you host, including “Host Live Game”. Starting stage, enemies per stage and enemy pace also apply to solo games.',
       ),
     );
     const save = (patch: Partial<StudioSettings>): void => {
@@ -841,7 +844,24 @@ export class TeacherStudio {
       return input;
     };
 
+    const stageCount = this.options.stageCount ?? 70;
     card.append(
+      field(
+        `Starting stage (1–${stageCount})`,
+        number(Math.min(settings.startStage, stageCount), 1, stageCount, (startStage) =>
+          save({ startStage }),
+        ),
+        'Later stages have more enemies, bigger waves and faster spawns.',
+      ),
+      field(
+        'Enemies per stage',
+        segmented<number>(
+          ENEMY_COUNT_OPTIONS.map((value) => [value, `${value}×`]),
+          settings.enemyCountMultiplier,
+          (enemyCountMultiplier) => save({ enemyCountMultiplier }),
+        ),
+        'Multiplies the number of enemy tanks in every stage.',
+      ),
       field(
         'Base starting HP',
         segmented<number>(
@@ -852,16 +872,17 @@ export class TeacherStudio {
         'Hits each tank can take before it is destroyed.',
       ),
       field(
-        'Enemy speed',
+        'Enemy speed & spawn gap',
         segmented<EnemySpeed>(
           [
-            ['slow', 'Slow'],
+            ['slow', 'Chill'],
             ['normal', 'Normal'],
-            ['fast', 'Fast'],
+            ['fast', 'Intense'],
           ],
           settings.enemySpeed,
           (enemySpeed) => save({ enemySpeed }),
         ),
+        'Chill: slower tanks, longer gaps between spawns. Intense: faster tanks, shorter gaps.',
       ),
       field(
         'Wave grace period (seconds)',

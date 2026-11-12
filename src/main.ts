@@ -176,6 +176,7 @@ controls.answerRequested.addListener(() => commandHub.toggle(0));
 // Teacher Studio: kits, flashcards and class rules, before a game starts
 const teacherStudio = new TeacherStudio({
   library: kitLibrary,
+  stageCount: manifestMapListReader.getCount(),
   onLaunch: () => sceneRouter.clearAndPush(GameSceneType.LiveHost),
   // Typing in the studio must not drive the arcade menus
   onOpenChanged: (open) => (open ? inputManager.unlisten() : inputManager.listen()),

@@ -10,12 +10,18 @@ export interface GameBalance {
   enemySpeedFactor: number;
   // Seconds of rest between enemy waves.
   waveGraceSeconds: number;
+  // Multiplier on the number of enemies per stage.
+  enemyCountFactor: number;
+  // Multiplier on the gap between enemy spawns (below 1 = busier).
+  spawnGapFactor: number;
 }
 
 export const CLASSIC_BALANCE: GameBalance = {
   startingHp: 1,
   enemySpeedFactor: 1,
   waveGraceSeconds: 4,
+  enemyCountFactor: 1,
+  spawnGapFactor: 1,
 };
 
 export const gameBalance: GameBalance = { ...CLASSIC_BALANCE };
