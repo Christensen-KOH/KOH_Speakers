@@ -28,6 +28,7 @@ export function buildWavePlan(
   baseList: TankType[],
   levelNumber: number,
   goldSlots: number[] = DEFAULT_GOLD_SLOTS,
+  waveSize: number = config.WAVE_SIZE,
 ): WavePlan {
   const list = baseList.map(copyType);
   const count = list.length;
@@ -48,7 +49,7 @@ export function buildWavePlan(
   }
 
   const waveEnds: number[] = [];
-  for (let end = config.WAVE_SIZE; end < count; end += config.WAVE_SIZE) {
+  for (let end = waveSize; end < count; end += waveSize) {
     waveEnds.push(end);
   }
   waveEnds.push(count);

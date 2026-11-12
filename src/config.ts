@@ -70,6 +70,14 @@ export const ENEMY_MAX_TOTAL_COUNT = 20;
 export const ENEMY_MAX_ALIVE_COUNT = 4;
 export const ENEMY_MAX_ALIVE_COUNT_MULTIPLAYER = 6;
 
+// Difficulty ramp (see level/Difficulty.ts)
+export const ENEMY_EXTRA_PER_STEP = 5;
+export const ENEMY_EXTRA_MAX_COUNT = 30;
+export const ENEMY_MIN_SPAWN_DELAY = 1.2;
+// The built-in maps are played this many times over; every second lap is
+// mirrored left-to-right so the stages feel new.
+export const STAGE_LAPS = 2;
+
 // TankKit Base Defense waves
 export const WAVE_SIZE = 5;
 export const WAVE_BREAK_DURATION = 4;

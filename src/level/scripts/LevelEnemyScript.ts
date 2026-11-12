@@ -8,6 +8,13 @@ import * as config from '../../config';
 
 import { LevelScript } from '../LevelScript';
 import {
+  getEnemySpawnDelay,
+  getEnemySpeedFactor,
+  getMaxAliveCount,
+  getWaveSize,
+  scaleEnemyList,
+} from '../Difficulty';
+import {
   BLITZ_GOLD_SLOTS,
   buildWavePlan,
   DEFAULT_GOLD_SLOTS,
@@ -32,15 +39,33 @@ export class LevelEnemyScript extends LevelScript {
   private waveIndex = 0;
   private announcedWaveIndex = -1;
   private waveBreakTimer = new Timer();
+  private spawnDelay = config.ENEMY_SPAWN_DELAY;
+  private speedFactor = 1;
+  private maxAliveCount = config.ENEMY_MAX_ALIVE_COUNT;
 
   protected setup({ match }: GameUpdateArgs): void {
     this.eventBus.enemySpawnCompleted.addListener(this.handleSpawnCompleted);
     this.eventBus.powerupPicked.addListener(this.handlePowerupPicked);
 
+    const levelNumber = this.session.getLevelNumber();
+    // Editor playtests run the map exactly as authored
+    const isRamped = !this.session.isPlaytest();
+    const baseList = this.mapConfig.getEnemySpawnList();
+
+    this.spawnDelay = isRamped
+      ? getEnemySpawnDelay(levelNumber)
+      : config.ENEMY_SPAWN_DELAY;
+    this.speedFactor = isRamped ? getEnemySpeedFactor(levelNumber) : 1;
+    this.maxAliveCount = getMaxAliveCount(
+      isRamped ? levelNumber : 1,
+      this.session.isMultiplayer(),
+    );
+
     this.wavePlan = buildWavePlan(
-      this.mapConfig.getEnemySpawnList(),
-      this.session.getLevelNumber(),
+      isRamped ? scaleEnemyList(baseList, levelNumber) : baseList,
+      levelNumber,
       match.isBlitz() ? BLITZ_GOLD_SLOTS : DEFAULT_GOLD_SLOTS,
+      isRamped ? getWaveSize(levelNumber) : config.WAVE_SIZE,
     );
     this.list = this.wavePlan.list;
 
@@ -104,7 +129,7 @@ export class LevelEnemyScript extends LevelScript {
     this.requestSpawn();
 
     // Start timer to spawn next enemy
-    this.spawnTimer.reset(config.ENEMY_SPAWN_DELAY);
+    this.spawnTimer.reset(this.spawnDelay);
   };
 
   private handleSpawnCompleted = (
@@ -121,7 +146,9 @@ export class LevelEnemyScript extends LevelScript {
     const tank = TankFactory.createEnemy(event.partyIndex, type);
     // Teacher Studio: Slow / Normal / Fast enemies
     tank.attributes.moveSpeed = Math.round(
-      tank.attributes.moveSpeed * gameBalance.enemySpeedFactor,
+      tank.attributes.moveSpeed *
+        gameBalance.enemySpeedFactor *
+        this.speedFactor,
     );
     tank.updateMatrix(); // Origin should be in before setting center
     tank.rotate(Rotation.Down);
@@ -157,7 +184,7 @@ export class LevelEnemyScript extends LevelScript {
       // If timer was stopped because max count of alive enemies has been
       // reached, restart it, because one of alive tanks has just been killed
       if (!this.spawnTimer.isActive() && !this.waveBreakTimer.isActive()) {
-        this.spawnTimer.reset(config.ENEMY_SPAWN_DELAY);
+        this.spawnTimer.reset(this.spawnDelay);
       }
 
       if (this.areAllDead()) {
@@ -291,9 +318,6 @@ export class LevelEnemyScript extends LevelScript {
   };
 
   private getMaxAliveCount(): number {
-    if (this.session.isMultiplayer()) {
-      return config.ENEMY_MAX_ALIVE_COUNT_MULTIPLAYER;
-    }
-    return config.ENEMY_MAX_ALIVE_COUNT;
+    return this.maxAliveCount;
   }
 }
