@@ -692,7 +692,7 @@ export class TeacherStudio {
     card.append(el('h3', 'tk-st-h3', 'Import questions'));
     const text = el('textarea', 'tk-st-input tk-st-mono');
     text.rows = 6;
-    text.placeholder = 'Paste JSON, CSV, or plain lines:\ngo - went | Past simple of go\nbuy - bought | Past simple of buy';
+    text.placeholder = 'Paste JSON, CSV, or plain lines:\nYesterday I ___ to school. | went\ngo - went | Past simple of go';
 
     const file = el('input');
     file.type = 'file';
@@ -817,7 +817,7 @@ export class TeacherStudio {
       el(
         'p',
         'tk-st-note',
-        'Saved on this device and applied automatically to every live game you host, including “Host Live Game”. Starting stage, enemies per stage and enemy pace also apply to solo games.',
+        'Saved on this device and applied automatically to every live game you host, including “Host Live Game”. Starting stage, enemy count and pace, starting shells and cash, and the reward multiplier also apply to solo games.',
       ),
     );
     const save = (patch: Partial<StudioSettings>): void => {

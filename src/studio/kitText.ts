@@ -42,18 +42,29 @@ export function parseKitText(text: string, name: string, now = Date.now()): KitI
       return;
     }
     const [pair, ...rest] = line.split('|');
-    const explanation = rest.join('|').trim();
-    const parts = pair.split(PAIR_SEPARATOR);
-    const front = (parts[0] ?? '').trim();
-    const back = parts.slice(1).join(' - ').trim();
+    let front: string;
+    let back: string;
+    let explanation: string;
+    if (PAIR_SEPARATOR.test(pair)) {
+      // `word - answer | explanation`
+      const parts = pair.split(PAIR_SEPARATOR);
+      front = (parts[0] ?? '').trim();
+      back = parts.slice(1).join(' - ').trim();
+      explanation = rest.join('|').trim();
+    } else {
+      // `question | answer | explanation`
+      front = pair.trim();
+      back = (rest[0] ?? '').trim();
+      explanation = rest.slice(1).join('|').trim();
+    }
     if (front === '' || back === '') {
-      warnings.push(`Line ${index + 1}: needs "word - answer", skipped.`);
+      warnings.push(`Line ${index + 1}: needs "question | answer" or "word - answer", skipped.`);
       return;
     }
     questions.push({
       id: `${kitId}-q${questions.length + 1}`,
       kind: QuestionKind.FillBlank,
-      prompt: `"${front}" → ___`,
+      prompt: front.includes('___') ? front : `"${front}" → ___`,
       answers: back
         .split(';')
         .map((answer) => answer.trim())

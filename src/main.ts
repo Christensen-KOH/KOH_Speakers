@@ -42,6 +42,7 @@ import {
   ShopController,
   UiRoot,
 } from './ui';
+import { loadStudioSettings } from './studio/StudioSettings';
 import { ScreenShake, TankSpriteTinter } from './entities';
 import { battleCamera } from './ui/Camera';
 import { outOfResourceText } from './ui/outOfAmmo';
@@ -200,10 +201,16 @@ new LiveStudentBridge(liveSession, economy, questionController, match, session);
 // Every new game starts with fresh resources, upgrades and question queue
 session.started.addListener(() => {
   match.begin();
-  economy.start(
-    toEconomySettings(match.getSettings()),
-    session.getPlayers().length,
-  );
+  const economySettings = toEconomySettings(match.getSettings());
+  if (!match.isLive()) {
+    // Solo/local games: Teacher Studio starting shells, cash and reward
+    // multiplier (live games get them through the room settings instead)
+    const studio = loadStudioSettings();
+    economySettings.startShells = studio.startShells;
+    economySettings.startCash = studio.startCash;
+    economySettings.rewardMultiplier = studio.rewardMultiplier;
+  }
+  economy.start(economySettings, session.getPlayers().length);
   questionController.startMatch();
   // Host Options "Starting lives" (1, 3, 10 or unlimited)
   const { startLives } = match.getSettings();
