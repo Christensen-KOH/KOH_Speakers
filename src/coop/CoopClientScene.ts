@@ -169,6 +169,7 @@ export class CoopClientScene extends GameScene {
       this.args.session.activateNextLevel();
     }
 
+    this.args.hud.setEnemiesLeft(world.left ?? 0);
     this.replica.playEvents(world.events);
     this.local.applyEvents(world.events, (x, y, cash) =>
       this.args.hud.popupAtField(x, y, `+${cash}`, 'cash'),

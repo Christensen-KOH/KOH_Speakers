@@ -4,10 +4,16 @@ import { EnemyTank } from '../../gameObjects';
 import { gameBalance } from '../../match/GameBalance';
 import { PowerupType } from '../../powerup';
 import { TankDeathReason, TankFactory, TankParty, TankType } from '../../tank';
+import { AiTankBehavior } from '../../tank/behaviors/AiTankBehavior';
 import * as config from '../../config';
 
 import { LevelScript } from '../LevelScript';
 import {
+  AiAggression,
+  BASE_AGGRESSION,
+  getEnemyAggression,
+  getEnemyBulletMaxCount,
+  getEnemyBulletSpeedFactor,
   getEnemySpawnDelay,
   getEnemySpeedFactor,
   getMaxAliveCount,
@@ -41,6 +47,9 @@ export class LevelEnemyScript extends LevelScript {
   private waveBreakTimer = new Timer();
   private spawnDelay = config.ENEMY_SPAWN_DELAY;
   private speedFactor = 1;
+  private bulletSpeedFactor = 1;
+  private aggression: AiAggression = BASE_AGGRESSION;
+  private rampLevel = 1;
   private maxAliveCount = config.ENEMY_MAX_ALIVE_COUNT;
 
   protected setup({ match }: GameUpdateArgs): void {
@@ -56,6 +65,9 @@ export class LevelEnemyScript extends LevelScript {
       ? getEnemySpawnDelay(levelNumber, gameBalance.spawnGapFactor)
       : config.ENEMY_SPAWN_DELAY;
     this.speedFactor = isRamped ? getEnemySpeedFactor(levelNumber) : 1;
+    this.bulletSpeedFactor = isRamped ? getEnemyBulletSpeedFactor(levelNumber) : 1;
+    this.aggression = isRamped ? getEnemyAggression(levelNumber) : BASE_AGGRESSION;
+    this.rampLevel = isRamped ? levelNumber : 1;
     this.maxAliveCount = getMaxAliveCount(
       isRamped ? levelNumber : 1,
       this.session.isMultiplayer(),
@@ -97,7 +109,14 @@ export class LevelEnemyScript extends LevelScript {
     });
   }
 
-  protected update({ deltaTime }: GameUpdateArgs): void {
+  /** Enemies still to beat this stage: on the field, spawning or queued. */
+  public getRemainingCount(): number {
+    return this.aliveTanks.length + this.spawningCount + this.getUnspawnedCount();
+  }
+
+  protected update({ deltaTime, hud }: GameUpdateArgs): void {
+    // Numeric counter next to the wave pill (writes only on change)
+    hud.setEnemiesLeft(this.getRemainingCount());
     this.spawnTimer.update(deltaTime);
     this.freezeTimer.update(deltaTime);
     this.waveBreakTimer.update(deltaTime);
@@ -145,12 +164,23 @@ export class LevelEnemyScript extends LevelScript {
       return;
     }
 
-    const tank = TankFactory.createEnemy(event.partyIndex, type);
-    // Teacher Studio: Slow / Normal / Fast enemies
+    const tank = TankFactory.createEnemy(
+      event.partyIndex,
+      type,
+      new AiTankBehavior(this.aggression),
+    );
+    // Teacher Studio: Slow / Normal / Fast enemies, on top of the stage ramp
     tank.attributes.moveSpeed = Math.round(
       tank.attributes.moveSpeed *
         gameBalance.enemySpeedFactor *
         this.speedFactor,
+    );
+    tank.attributes.bulletSpeed = Math.round(
+      tank.attributes.bulletSpeed * this.bulletSpeedFactor,
+    );
+    tank.attributes.bulletMaxCount = getEnemyBulletMaxCount(
+      this.rampLevel,
+      tank.attributes.bulletMaxCount,
     );
     tank.updateMatrix(); // Origin should be in before setting center
     tank.rotate(Rotation.Down);

@@ -1,11 +1,12 @@
 import type { Hud } from './Hud';
+import type { LockerPanel } from './LockerPanel';
 import type { OverlayGate } from './OverlayGate';
 import type { QuestionController } from './QuestionController';
 import type { ShopController } from './ShopController';
 
 import './styles/hub.css';
 
-type HubTab = 'questions' | 'shop';
+type HubTab = 'questions' | 'shop' | 'locker';
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -35,6 +36,8 @@ export class CommandHub {
   private readonly strip = el('div', 'tk-hub-tabs tk-glass');
   private readonly questionsTab = el('button', 'tk-hub-tab', '📝 Answer English Questions');
   private readonly shopTab = el('button', 'tk-hub-tab', '🛒 Power-Ups & Upgrades');
+  private readonly lockerTab = el('button', 'tk-hub-tab', '🎨 Skins & Cosmetics');
+  private readonly locker: LockerPanel;
   private lastTab: HubTab = 'questions';
   private playerIndex = 0;
 
@@ -44,17 +47,21 @@ export class CommandHub {
     gate: OverlayGate,
     questions: QuestionController,
     shop: ShopController,
+    locker: LockerPanel,
   ) {
     this.gate = gate;
+    this.locker = locker;
     this.questions = questions;
     this.shop = shop;
 
     this.strip.hidden = true;
     this.questionsTab.type = 'button';
     this.shopTab.type = 'button';
+    this.lockerTab.type = 'button';
+    this.lockerTab.addEventListener('click', () => this.switchTo('locker'));
     this.questionsTab.addEventListener('click', () => this.switchTo('questions'));
     this.shopTab.addEventListener('click', () => this.switchTo('shop'));
-    this.strip.append(this.questionsTab, this.shopTab);
+    this.strip.append(this.questionsTab, this.shopTab, this.lockerTab);
     container.append(this.strip);
 
     this.trackKeyboard();
@@ -62,6 +69,7 @@ export class CommandHub {
     hud.hubRequested.addListener((playerIndex) => this.toggle(playerIndex));
     // Controllers acquire the gate just before their panel opens.
     gate.changed.addListener(() => window.setTimeout(() => this.refresh(), 0));
+    locker.openChanged.addListener(() => window.setTimeout(() => this.refresh(), 0));
   }
 
   /**
@@ -104,6 +112,8 @@ export class CommandHub {
       this.questions.close();
     } else if (this.shop.isOpen()) {
       this.shop.close();
+    } else if (this.isLockerInHub()) {
+      this.locker.close();
     } else if (this.gate.isFree()) {
       this.playerIndex = playerIndex;
       this.open(this.lastTab);
@@ -113,13 +123,30 @@ export class CommandHub {
   private open(tab: HubTab): void {
     if (tab === 'questions') {
       this.questions.open(this.playerIndex);
-    } else {
+    } else if (tab === 'shop') {
       this.shop.open(this.playerIndex);
+    } else {
+      this.locker.openInHub(this.playerIndex);
     }
   }
 
+  // The locker counts as a Hub tab only while a battle is running.
+  private isLockerInHub(): boolean {
+    return this.locker.isOpen() && this.gate.getLevel() !== null;
+  }
+
+  private currentTab(): HubTab {
+    if (this.shop.isOpen()) {
+      return 'shop';
+    }
+    if (this.isLockerInHub()) {
+      return 'locker';
+    }
+    return 'questions';
+  }
+
   private switchTo(tab: HubTab): void {
-    const current: HubTab = this.shop.isOpen() ? 'shop' : 'questions';
+    const current = this.currentTab();
     if (tab === current) {
       return;
     }
@@ -129,8 +156,10 @@ export class CommandHub {
     }
     if (current === 'questions') {
       this.questions.close();
-    } else {
+    } else if (current === 'shop') {
       this.shop.close();
+    } else {
+      this.locker.close();
     }
     this.open(tab);
   }
@@ -138,15 +167,20 @@ export class CommandHub {
   private refresh(): void {
     const questionsOpen = this.questions.isOpen();
     const shopOpen = this.shop.isOpen();
+    const lockerOpen = this.isLockerInHub();
     if (questionsOpen) {
       this.lastTab = 'questions';
     } else if (shopOpen) {
       this.lastTab = 'shop';
+    } else if (lockerOpen) {
+      this.lastTab = 'locker';
     }
-    this.strip.hidden = !(questionsOpen || shopOpen);
+    const anyOpen = questionsOpen || shopOpen || lockerOpen;
+    this.strip.hidden = !anyOpen;
     // Hides name tags and alerts that would bleed over the Hub (hub.css)
-    document.documentElement.classList.toggle('tk-hub-open', questionsOpen || shopOpen);
+    document.documentElement.classList.toggle('tk-hub-open', anyOpen);
     this.questionsTab.classList.toggle('is-active', questionsOpen);
     this.shopTab.classList.toggle('is-active', shopOpen);
+    this.lockerTab.classList.toggle('is-active', lockerOpen);
   }
 }

@@ -3,6 +3,32 @@
 // no imports, no parameter properties.
 
 export const LIVE_PATH = '/live';
+
+// Tank Locker cosmetics, synced so teammates see each other's tanks. The
+// catalogue (names, prices, palettes) lives in src/cosmetics/Cosmetics.ts.
+export const SKIN_IDS = [
+  'classic',
+  'cobalt',
+  'crimson',
+  'emerald',
+  'arctic',
+  'cyber',
+  'obsidian',
+  'solar',
+] as const;
+export const TRAIL_IDS = ['none', 'fire', 'frost', 'neon', 'stardust'] as const;
+export type SkinId = (typeof SKIN_IDS)[number];
+export type TrailId = (typeof TRAIL_IDS)[number];
+export const DEFAULT_SKIN: SkinId = 'classic';
+export const DEFAULT_TRAIL: TrailId = 'none';
+
+export function isSkinId(value: unknown): value is SkinId {
+  return (SKIN_IDS as readonly unknown[]).includes(value);
+}
+
+export function isTrailId(value: unknown): value is TrailId {
+  return (TRAIL_IDS as readonly unknown[]).includes(value);
+}
 // GET: { addresses: string[] } of the server's LAN URLs.
 export const LIVE_INFO_PATH = '/live-info';
 export const MAX_PLAYERS = 60;
@@ -116,6 +142,9 @@ export interface CoopInput {
   // Question sheet or shop open (shown as 💭 over the tank).
   thinking: boolean;
   loadout: CoopLoadout;
+  // Tank Locker cosmetics (ids from src/cosmetics/Cosmetics.ts).
+  skin: SkinId;
+  trail: TrailId;
 }
 
 export interface CoopTankState {
@@ -137,6 +166,8 @@ export interface CoopTankState {
   kills: number;
   alive: boolean;
   shield: boolean;
+  skin: SkinId;
+  trail: TrailId;
 }
 
 export interface CoopEnemyState {
@@ -180,6 +211,8 @@ export interface CoopWorld {
   bullets: CoopBulletState[];
   events: CoopEvent[];
   wave: { n: number; total: number; boss: boolean } | null;
+  // Enemies still to beat this stage (alive + yet to spawn).
+  left: number;
   // Players without a tank because the battlefield is full.
   waiting: string[];
 }
@@ -196,6 +229,8 @@ export function emptyCoopInput(): CoopInput {
     crawl: false,
     thinking: false,
     loadout: { weaponTier: 0, speedBoost: false, heavyArmor: false },
+    skin: DEFAULT_SKIN,
+    trail: DEFAULT_TRAIL,
   };
 }
 
@@ -233,6 +268,9 @@ export function cleanCoopInput(raw: unknown): CoopInput {
       speedBoost: loadout.speedBoost === true,
       heavyArmor: loadout.heavyArmor === true,
     },
+    // Only catalogue ids get through; anything else falls back to default
+    skin: isSkinId(data.skin) ? data.skin : DEFAULT_SKIN,
+    trail: isTrailId(data.trail) ? data.trail : DEFAULT_TRAIL,
   };
 }
 

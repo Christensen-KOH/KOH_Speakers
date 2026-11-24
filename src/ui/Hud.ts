@@ -84,6 +84,7 @@ export class Hud {
   private readonly bar = el('div', 'tk-hud');
   private readonly wave = el('div', 'tk-hud-wave tk-glass');
   private readonly timer = el('div', 'tk-hud-wave tk-hud-timer tk-glass');
+  private readonly enemies = el('div', 'tk-hud-wave tk-hud-enemies tk-glass');
   private readonly alert = el('div', 'tk-hud-alert');
   private readonly toastEl = el('div', 'tk-hud-toast tk-glass');
   private readonly feed = el('div', 'tk-hud-feed');
@@ -121,11 +122,13 @@ export class Hud {
       this.players.push(widgets);
       this.bar.append(widgets.group);
       if (index === 0) {
-        this.bar.append(this.wave, this.timer);
+        this.bar.append(this.wave, this.enemies, this.timer);
       }
     }
     setText(this.wave, '');
     this.wave.hidden = true;
+    this.enemies.hidden = true;
+    setText(this.enemies, '');
     this.timer.hidden = true;
     this.bar.hidden = false;
     this.lastShells = -1;
@@ -148,6 +151,17 @@ export class Hud {
       this.wave,
       hasBoss ? `Boss wave ${waveNumber}/${totalWaves}` : `Wave ${waveNumber}/${totalWaves}`,
     );
+  }
+
+  /** "👾 74 left": the whole army still to beat this stage. */
+  public setEnemiesLeft(count: number): void {
+    const text = `👾 ${count} left`;
+    if (this.enemies.textContent === text) {
+      return;
+    }
+    this.enemies.hidden = false;
+    this.enemies.setAttribute('aria-label', `${count} enemies left`);
+    setText(this.enemies, text);
   }
 
   /** Tycoon Blitz countdown, in seconds. */

@@ -1,5 +1,6 @@
 import { CanvasImage, Rect, SpriteLoader } from '../core';
 import { TankColor } from '../tank';
+import { SkinPalette, SKINS, skinColorId } from '../cosmetics/Cosmetics';
 
 type Rgb = [number, number, number];
 
@@ -44,6 +45,103 @@ const TINT_SETS: TintSet[] = [
 export class TankSpriteTinter {
   public static generate(spriteLoader: SpriteLoader): void {
     TINT_SETS.forEach((set) => this.generateSet(spriteLoader, set));
+    this.generateSkins(spriteLoader);
+  }
+
+  /**
+   * Tank Locker skins: every player sprite re-coloured through a 3-stop
+   * palette (dark → mid → light by luminance), with an optional 1px rim.
+   * Registered as "tank.player.skin-<id>-<phase>.<tier>.<dir>.<frame>".
+   */
+  private static generateSkins(spriteLoader: SpriteLoader): void {
+    const source = `tank.player.${TankColor.Primary}.`;
+    const sourceIds = spriteLoader.getIds().filter((id) => id.startsWith(source));
+    if (sourceIds.length === 0) {
+      return;
+    }
+    const sourceSprites = sourceIds.map((id) => spriteLoader.load(id));
+    const sheet = sourceSprites[0].image;
+
+    SKINS.forEach((skin) => {
+      skin.palettes.forEach((palette, phase) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = sheet.getWidth();
+        canvas.height = sheet.getHeight();
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        context.imageSmoothingEnabled = false;
+        context.drawImage(sheet.getElement(), 0, 0);
+
+        sourceSprites.forEach((sprite) => {
+          this.paletteRect(context, sprite.sourceRect, palette);
+        });
+
+        const image = new CanvasImage(canvas);
+        const color = skinColorId(skin.id, phase);
+        sourceIds.forEach((id, index) => {
+          const rect = sourceSprites[index].sourceRect;
+          spriteLoader.register(
+            `tank.player.${color}.${id.slice(source.length)}`,
+            image,
+            new Rect(rect.x, rect.y, rect.width, rect.height),
+          );
+        });
+      });
+    });
+  }
+
+  private static paletteRect(
+    context: CanvasRenderingContext2D,
+    rect: Rect,
+    palette: SkinPalette,
+  ): void {
+    const imageData = context.getImageData(rect.x, rect.y, rect.width, rect.height);
+    const { data } = imageData;
+    const { width, height } = imageData;
+    const opaque = new Uint8Array(width * height);
+
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] === 0) {
+        continue;
+      }
+      opaque[i / 4] = 1;
+      const t = (data[i] + data[i + 1] + data[i + 2]) / (3 * 255);
+      const [from, to, k] =
+        t < 0.5
+          ? [palette.dark, palette.mid, t / 0.5]
+          : [palette.mid, palette.light, (t - 0.5) / 0.5];
+      data[i] = from[0] + (to[0] - from[0]) * k;
+      data[i + 1] = from[1] + (to[1] - from[1]) * k;
+      data[i + 2] = from[2] + (to[2] - from[2]) * k;
+    }
+
+    if (palette.outline) {
+      const [r, g, b] = palette.outline;
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          if (opaque[y * width + x] === 0) {
+            continue;
+          }
+          // Edge pixel: an opaque pixel touching transparency or the frame edge
+          const edge =
+            x === 0 ||
+            y === 0 ||
+            x === width - 1 ||
+            y === height - 1 ||
+            opaque[y * width + x - 1] === 0 ||
+            opaque[y * width + x + 1] === 0 ||
+            opaque[(y - 1) * width + x] === 0 ||
+            opaque[(y + 1) * width + x] === 0;
+          if (edge) {
+            const i = (y * width + x) * 4;
+            data[i] = r;
+            data[i + 1] = g;
+            data[i + 2] = b;
+          }
+        }
+      }
+    }
+
+    context.putImageData(imageData, rect.x, rect.y);
   }
 
   private static generateSet(spriteLoader: SpriteLoader, set: TintSet): void {

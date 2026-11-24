@@ -3,6 +3,7 @@ import { GameUpdateArgs, Rotation, Tag } from '../../game';
 import { Tank } from '../../gameObjects';
 import * as config from '../../config';
 
+import { AiAggression, BASE_AGGRESSION } from '../../level/Difficulty';
 import { TankBehavior } from '../TankBehavior';
 
 enum State {
@@ -14,15 +15,9 @@ enum State {
 
 const THINK_DURATION = 0.3;
 const FIRE_MIN_DELAY = 0;
-const FIRE_MAX_DELAY = 1.5;
-const STUCK_FIRE_CHANCE = 30;
-const UNSTUCK_THINK_CHANCE = 5;
-const ROTATE_TOWARDS_BASE_CHANCE = 30;
-// Far out in the open arena enemies head in more often
-const ROTATE_TOWARDS_BASE_FAR_CHANCE = 55;
+// Fire rate, targeting and flanking chances scale with the stage; see
+// getEnemyAggression in level/Difficulty.ts.
 const FAR_DISTANCE = config.MAP_SIZE / 2;
-// A player tank this close becomes the target instead of the base
-const CHASE_RADIUS = config.TILE_SIZE_LARGE * 6;
 const ROTATE_UP_CHANCE = 10;
 
 const ROTATIONS = [Rotation.Up, Rotation.Down, Rotation.Left, Rotation.Right];
@@ -33,6 +28,12 @@ export class AiTankBehavior extends TankBehavior {
   private thinkTimer = new Timer();
   private fireTimer = new Timer();
   private log = new Logger(AiTankBehavior.name, Logger.Level.Info);
+  private readonly aggression: AiAggression;
+
+  constructor(aggression: AiAggression = BASE_AGGRESSION) {
+    super();
+    this.aggression = aggression;
+  }
 
   public update(tank: Tank, updateArgs: GameUpdateArgs): void {
     if (this.fireTimer.isDone()) {
@@ -115,7 +116,7 @@ export class AiTankBehavior extends TankBehavior {
   private attemptFire(): void {
     // Convert seconds to milliseconds to use random integer func
     const min = FIRE_MIN_DELAY * 1000;
-    const max = FIRE_MAX_DELAY * 1000;
+    const max = this.aggression.fireMaxDelay * 1000;
 
     const delay = RandomUtils.number(min, max) / 1000;
 
@@ -125,7 +126,7 @@ export class AiTankBehavior extends TankBehavior {
 
   private shouldThinkWhenUnstuck(tank: Tank): boolean {
     const num = RandomUtils.number(1, 100);
-    const hasChance = num <= UNSTUCK_THINK_CHANCE;
+    const hasChance = num <= this.aggression.rethinkChance;
 
     const { rotation, position } = tank;
 
@@ -145,7 +146,7 @@ export class AiTankBehavior extends TankBehavior {
   }
 
   private shouldFireWhenStuck(): boolean {
-    const shouldFire = RandomUtils.probability(STUCK_FIRE_CHANCE);
+    const shouldFire = RandomUtils.probability(this.aggression.stuckFireChance);
 
     return shouldFire;
   }
@@ -155,8 +156,8 @@ export class AiTankBehavior extends TankBehavior {
     const distance = target.clone().sub(tank.getCenter()).length();
     const shouldRotateTowardsTarget = RandomUtils.probability(
       distance > FAR_DISTANCE
-        ? ROTATE_TOWARDS_BASE_FAR_CHANCE
-        : ROTATE_TOWARDS_BASE_CHANCE,
+        ? this.aggression.targetFarChance
+        : this.aggression.targetChance,
     );
 
     if (shouldRotateTowardsTarget) {
@@ -195,7 +196,7 @@ export class AiTankBehavior extends TankBehavior {
       config.BASE_DEFAULT_POSITION.x + config.BASE_DEFAULT_SIZE.width / 2,
       config.BASE_DEFAULT_POSITION.y + config.BASE_DEFAULT_SIZE.height / 2,
     );
-    let nearest = CHASE_RADIUS;
+    let nearest = this.aggression.chaseRadius;
 
     const siblings = tank.parent === null ? [] : tank.parent.children;
     for (const other of siblings) {

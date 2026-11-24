@@ -9,6 +9,8 @@ import {
 } from '../core';
 import { AutoTurretPainter } from '../entities/AutoTurret';
 import { ParticleBurst } from '../entities/fx';
+import { emitTrail, TRAIL_EMIT_SECONDS } from '../entities/fx/TrailPuff';
+import { DEFAULT_SKIN, DEFAULT_TRAIL, getSkinColorFrames, getSkinPhase } from '../cosmetics';
 import { Rotation } from '../game';
 import { Border, Explosion, SmallExplosion, TerrainTile } from '../gameObjects';
 import {
@@ -123,6 +125,7 @@ class ReplicaTank extends SpriteObject {
   public readonly shield = new SpriteObject(TANK_SIZE, config.SHIELD_Z_INDEX);
   public frame = 1;
   public frameTime = 0;
+  public trailTime = 0;
 }
 
 /**
@@ -289,10 +292,21 @@ export class WorldReplica {
       const x = object.px;
       const y = object.py;
 
-      this.animate(object, mine ? local.moving : state.moving, deltaTime);
+      const moving = mine ? local.moving : state.moving;
+      this.animate(object, moving, deltaTime);
       const type = new TankType(TankParty.Player, state.tier as TankTier);
-      const color = PLAYER_COLORS[state.slot % PLAYER_COLORS.length];
+      // Tank Locker skin (Classic keeps the slot colour)
+      const skin = state.skin ?? DEFAULT_SKIN;
+      const frames = getSkinColorFrames(skin, PLAYER_COLORS[state.slot % PLAYER_COLORS.length]);
+      const color = frames[getSkinPhase(skin, this.clock) % frames.length] as TankColor;
       const rotation = (mine ? local.r : state.r) as Rotation;
+      if (moving) {
+        object.trailTime -= deltaTime;
+        if (object.trailTime <= 0) {
+          object.trailTime = TRAIL_EMIT_SECONDS;
+          emitTrail(this.field, { x, y }, rotation, state.trail ?? DEFAULT_TRAIL);
+        }
+      }
       object.place(x, y, this.sprite(TankSpriteId.create(type, color, rotation, object.frame)));
 
       const shieldFrame = Math.floor(this.clock / 0.06) % 2 === 0 ? 'shield.1' : 'shield.2';

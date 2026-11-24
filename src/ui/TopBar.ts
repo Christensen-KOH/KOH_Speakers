@@ -11,9 +11,11 @@ import './styles/topbar.css';
  */
 export class TopBar {
   public readonly studioRequested = new Subject<void>();
+  public readonly lockerRequested = new Subject<void>();
   private readonly element = document.createElement('div');
   private readonly slot = document.createElement('div');
   private readonly studio = document.createElement('button');
+  private readonly locker = document.createElement('button');
 
   constructor() {
     this.element.className = 'tk-topbar';
@@ -28,6 +30,15 @@ export class TopBar {
       this.studioRequested.notify(null);
     });
 
+    this.locker.type = 'button';
+    this.locker.className = 'tk-topbar-btn tk-topbar-locker';
+    this.locker.textContent = '🎨 Tank Locker';
+    this.locker.title = 'Buy and equip tank skins and trails';
+    this.locker.addEventListener('click', () => {
+      this.locker.blur();
+      this.lockerRequested.notify(null);
+    });
+
     const fullscreen = document.createElement('button');
     fullscreen.type = 'button';
     fullscreen.className = 'tk-topbar-btn';
@@ -39,7 +50,7 @@ export class TopBar {
       void toggleFullscreen();
     });
 
-    this.element.append(this.slot, this.studio, fullscreen);
+    this.element.append(this.slot, this.locker, this.studio, fullscreen);
   }
 
   public getElement(): HTMLElement {
@@ -54,5 +65,7 @@ export class TopBar {
   /** The studio button belongs to menus, not to a running battle. */
   public setStudioVisible(visible: boolean): void {
     this.studio.hidden = !visible;
+    // In battle the locker lives in the Hub instead
+    this.locker.hidden = !visible;
   }
 }

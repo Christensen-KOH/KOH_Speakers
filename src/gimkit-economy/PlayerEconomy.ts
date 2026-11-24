@@ -1,4 +1,5 @@
 import { Subject } from '../core/Subject';
+import { lockerStore } from '../cosmetics/LockerStore';
 
 import { CashAccount } from './CashAccount';
 import { EconomySettings } from './EconomySettings';
@@ -99,6 +100,8 @@ export class PlayerEconomy {
   public earn(amount: number): void {
     this.cashEarned += amount;
     this.cash.earn(amount);
+    // Every dollar earned also banks a persistent Tank Locker coin
+    lockerStore.addCoins(amount);
   }
 
   public isOutOfFuel(): boolean {

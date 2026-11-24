@@ -70,10 +70,20 @@ export const ENEMY_MAX_TOTAL_COUNT = 20;
 export const ENEMY_MAX_ALIVE_COUNT = 4;
 export const ENEMY_MAX_ALIVE_COUNT_MULTIPLAYER = 6;
 
-// Difficulty ramp (see level/Difficulty.ts)
-export const ENEMY_EXTRA_PER_STEP = 5;
-export const ENEMY_EXTRA_MAX_COUNT = 30;
-export const ENEMY_MIN_SPAWN_DELAY = 1.2;
+// Difficulty ramp (see level/Difficulty.ts): every value grows a little on
+// every stage, all the way from stage 1 to the final stage.
+export const DIFFICULTY_FINAL_STAGE = 70;
+// Stage army size: 22 on stage 1 -> 55 on stage 35 -> 90 on stage 70.
+export const ENEMY_COUNT_FIRST_STAGE = 22;
+export const ENEMY_COUNT_MID_STAGE = 55;
+export const ENEMY_COUNT_MID_STAGE_NUMBER = 35;
+export const ENEMY_COUNT_FINAL_STAGE = 90;
+// Enemies on the field at once on the final stage (stage 1 uses the
+// ENEMY_MAX_ALIVE_COUNT* values above).
+export const ENEMY_MAX_ALIVE_FINAL = 11;
+export const ENEMY_MAX_ALIVE_FINAL_MULTIPLAYER = 12;
+// Seconds between spawns: ENEMY_SPAWN_DELAY on stage 1 down to this.
+export const ENEMY_MIN_SPAWN_DELAY = 0.85;
 // The built-in maps are played this many times over; every second lap is
 // mirrored left-to-right so the stages feel new.
 export const STAGE_LAPS = 2;

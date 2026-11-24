@@ -1,4 +1,14 @@
-import { Subject } from '../core';
+import { SpriteLoader, Subject } from '../core';
+import {
+  DEFAULT_SKIN,
+  DEFAULT_TRAIL,
+  getSkinColorFrames,
+  getSkinPhase,
+  lockerStore,
+  SkinId,
+  TrailId,
+} from '../cosmetics';
+import { emitTrail, TRAIL_EMIT_SECONDS } from '../entities/fx/TrailPuff';
 import { GameUpdateArgs, Tag } from '../game';
 import { applyLoadout, Loadout, PlayerEconomy } from '../gimkit-economy';
 import {
@@ -23,8 +33,16 @@ export class PlayerTank extends Tank {
   public upgraded = new Subject<{ tier: TankTier }>();
   public tags = [Tag.Tank, Tag.Player];
   public zIndex = config.PLAYER_TANK_Z_INDEX;
-  private tierSkinAnimations = new Map<TankTier, TankSkinAnimation>();
-  private colors: TankColor[] = [];
+  // One animation per skin phase (animated skins have several) per tier.
+  private tierSkinAnimations = new Map<TankTier, TankSkinAnimation[]>();
+  private spriteLoader: SpriteLoader = null;
+  // Tank Locker cosmetics. Player 1 on this device follows the locker;
+  // co-op students' tanks get theirs from the network.
+  private skinId: SkinId = DEFAULT_SKIN;
+  private trailId: TrailId = DEFAULT_TRAIL;
+  private remoteCosmetics = false;
+  private skinClock = 0;
+  private trailTimer = 0;
   private economy: PlayerEconomy = null;
   private isBrawl = false;
   // Co-op host: a networked student's tank. Their shells, fuel and shop
@@ -48,6 +66,83 @@ export class PlayerTank extends Tank {
     }
   }
 
+  /** Co-op host: a student's chosen skin and trail. */
+  public setRemoteCosmetics(skinId: SkinId, trailId: TrailId): void {
+    this.remoteCosmetics = true;
+    this.trailId = trailId;
+    if (skinId !== this.skinId) {
+      this.skinId = skinId;
+      this.buildSkins();
+    }
+  }
+
+  public getSkinId(): SkinId {
+    return this.skinId;
+  }
+
+  public getTrailId(): TrailId {
+    return this.trailId;
+  }
+
+  private followsLocker(): boolean {
+    return !this.remoteCosmetics && !this.isRemote() && this.partyIndex === 0;
+  }
+
+  private buildSkins(): void {
+    if (this.spriteLoader === null) {
+      return;
+    }
+    const slotColor = TankColorFactory.createPlayerColor(this.partyIndex);
+    const colors = getSkinColorFrames(this.skinId, slotColor) as TankColor[];
+    const types: [TankTier, () => TankType][] = [
+      [TankTier.A, (): TankType => TankType.PlayerA()],
+      [TankTier.B, (): TankType => TankType.PlayerB()],
+      [TankTier.C, (): TankType => TankType.PlayerC()],
+      [TankTier.D, (): TankType => TankType.PlayerD()],
+    ];
+    types.forEach(([tier, create]) => {
+      this.tierSkinAnimations.set(
+        tier,
+        colors.map((color) => new TankSkinAnimation(this.spriteLoader, create(), [color])),
+      );
+    });
+    this.skinAnimation = this.currentSkinAnimation();
+  }
+
+  private currentSkinAnimation(): TankSkinAnimation {
+    const phases = this.tierSkinAnimations.get(this.type.tier);
+    const phase = getSkinPhase(this.skinId, this.skinClock);
+    return phases[phase % phases.length];
+  }
+
+  protected updateAnimation(deltaTime: number): void {
+    if (this.followsLocker()) {
+      this.trailId = lockerStore.getEquippedTrail();
+      const equipped = lockerStore.getEquippedSkin();
+      if (equipped !== this.skinId) {
+        this.skinId = equipped;
+        this.buildSkins();
+      }
+    }
+
+    this.skinClock += deltaTime;
+    const next = this.currentSkinAnimation();
+    if (next !== this.skinAnimation) {
+      this.skinAnimation = next;
+    }
+
+    super.updateAnimation(deltaTime);
+
+    // Cosmetic trail while driving
+    if (this.state === TankState.Moving && this.parent !== null) {
+      this.trailTimer -= deltaTime;
+      if (this.trailTimer <= 0) {
+        this.trailTimer = TRAIL_EMIT_SECONDS;
+        emitTrail(this.parent, this.getCenter(), this.rotation, this.trailId);
+      }
+    }
+  }
+
   public isRemote(): boolean {
     return this.remoteLoadout !== null;
   }
@@ -65,27 +160,12 @@ export class PlayerTank extends Tank {
       this.armor = PLAYER_MAX_SHIELD;
     }
 
-    // Player only has one color
-    this.colors.push(TankColorFactory.createPlayerColor(this.partyIndex));
-
-    this.tierSkinAnimations.set(
-      TankTier.A,
-      new TankSkinAnimation(spriteLoader, TankType.PlayerA(), this.colors),
-    );
-    this.tierSkinAnimations.set(
-      TankTier.B,
-      new TankSkinAnimation(spriteLoader, TankType.PlayerB(), this.colors),
-    );
-    this.tierSkinAnimations.set(
-      TankTier.C,
-      new TankSkinAnimation(spriteLoader, TankType.PlayerC(), this.colors),
-    );
-    this.tierSkinAnimations.set(
-      TankTier.D,
-      new TankSkinAnimation(spriteLoader, TankType.PlayerD(), this.colors),
-    );
-
-    this.skinAnimation = this.tierSkinAnimations.get(this.type.tier);
+    this.spriteLoader = spriteLoader;
+    if (this.followsLocker()) {
+      this.skinId = lockerStore.getEquippedSkin();
+      this.trailId = lockerStore.getEquippedTrail();
+    }
+    this.buildSkins();
 
     super.setup(updateArgs);
   }
@@ -102,7 +182,7 @@ export class PlayerTank extends Tank {
     this.type.increaseTier(targetTier);
 
     this.refreshLoadout();
-    this.skinAnimation = this.tierSkinAnimations.get(this.type.tier);
+    this.skinAnimation = this.currentSkinAnimation();
 
     if (notify === true) {
       this.upgraded.notify({ tier: this.type.tier });

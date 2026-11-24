@@ -260,6 +260,7 @@ export class CoopHostBattle {
       bullets,
       events: this.events,
       wave: this.wave,
+      left: this.enemyScript.getRemainingCount(),
       waiting: this.roster.getWaiting(),
     };
     if (sendGrid) {
@@ -290,6 +291,8 @@ export class CoopHostBattle {
         kills: seat.kills,
         alive: tank !== null && tank.isAlive(),
         shield: tank !== null && tank.shield !== null,
+        skin: seat.input.skin,
+        trail: seat.input.trail,
       };
     });
   }

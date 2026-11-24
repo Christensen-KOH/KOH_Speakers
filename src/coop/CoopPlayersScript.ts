@@ -99,6 +99,8 @@ export class CoopPlayersScript extends LevelScript {
         state.loadoutKey = key;
         tank.setRemoteLoadout(seat.input.loadout);
       }
+      // Skins swap the moment a student equips one in their Hub
+      tank.setRemoteCosmetics(seat.input.skin, seat.input.trail);
 
       // Studying Shield: invulnerable anywhere while the Hub is open
       if (seat.input.thinking && tank.shield === null) {
@@ -131,6 +133,7 @@ export class CoopPlayersScript extends LevelScript {
 
     const tank = TankFactory.createPlayer(slot, TankType.PlayerA(), new RemoteTankBehavior(seat));
     tank.setRemoteLoadout(seat.input.loadout);
+    tank.setRemoteCosmetics(seat.input.skin, seat.input.trail);
     state.loadoutKey = JSON.stringify(seat.input.loadout);
     tank.updateMatrix();
     tank.setCenter(event.centerPosition);

@@ -45,6 +45,8 @@ import {
 import { loadStudioSettings } from './studio/StudioSettings';
 import { ScreenShake, TankSpriteTinter } from './entities';
 import { battleCamera } from './ui/Camera';
+import { LockerPanel } from './ui/LockerPanel';
+import { lockerStore } from './cosmetics';
 import { outOfResourceText } from './ui/outOfAmmo';
 
 import * as config from './config';
@@ -144,12 +146,16 @@ questionController.shopRequested.addListener((playerIndex) =>
   shopController.open(playerIndex),
 );
 
+// Tank Locker: skins + trails bought with persistent Locker Coins
+const lockerPanel = new LockerPanel(uiRoot.getLayer(), lockerStore, overlayGate, spriteLoader);
+
 const commandHub = new CommandHub(
   uiRoot.getLayer(),
   hud,
   overlayGate,
   questionController,
   shopController,
+  lockerPanel,
 );
 // Controllers: Start / Y toggle the Hub, D-pad + A answer inside it
 const gamepadHub = new GamepadHub(
@@ -183,6 +189,17 @@ const teacherStudio = new TeacherStudio({
   onOpenChanged: (open) => (open ? inputManager.unlisten() : inputManager.listen()),
 });
 uiRoot.getTopBar().studioRequested.addListener(() => teacherStudio.open());
+uiRoot.getTopBar().lockerRequested.addListener(() => lockerPanel.openStandalone());
+// On menus the locker has no overlay gate: stop the arcade menu reading keys
+lockerPanel.openChanged.addListener((open) => {
+  if (overlayGate.getLevel() === null) {
+    if (open) {
+      inputManager.unlisten();
+    } else {
+      inputManager.listen();
+    }
+  }
+});
 // The button belongs to menus, not to a running battle
 overlayGate.changed.addListener(() =>
   uiRoot.getTopBar().setStudioVisible(overlayGate.getLevel() === null),

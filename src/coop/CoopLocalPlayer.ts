@@ -8,6 +8,7 @@ import {
 } from '../gimkit-economy';
 import type { CoopAction, CoopEvent, CoopInput, CoopTankState } from '../live/protocol';
 import { emptyCoopInput } from '../live/protocol';
+import { lockerStore } from '../cosmetics/LockerStore';
 import { TankParty, TankType } from '../tank';
 import type { TankTier, TankVariant } from '../tank';
 import { TankAttributesFactory } from '../tank/TankAttributesFactory';
@@ -230,6 +231,8 @@ export class CoopLocalPlayer {
         speedBoost: loadout.speedBoost,
         heavyArmor: loadout.heavyArmor,
       },
+      skin: lockerStore.getEquippedSkin(),
+      trail: lockerStore.getEquippedTrail(),
     };
 
     this.prediction.step(
