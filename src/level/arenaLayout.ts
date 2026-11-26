@@ -5,10 +5,11 @@ export interface ArenaKiosk {
   row: number;
 }
 
-// Vending-machine stations in a row across the middle of the classic board.
-// The arena builder clears any terrain under them.
+// Vending-machine stations in a row across the middle of the widescreen
+// field (64px tiles; 10.5 is the exact centre of the 22-tile width). The
+// arena builder clears any terrain under them.
 export const ARENA_KIOSKS: ArenaKiosk[] = [
-  { kind: 'shield', col: 3, row: 6 },
-  { kind: 'gadgets', col: 6, row: 6 },
-  { kind: 'repair', col: 9, row: 6 },
+  { kind: 'shield', col: 4, row: 6 },
+  { kind: 'gadgets', col: 10.5, row: 6 },
+  { kind: 'repair', col: 17, row: 6 },
 ];

@@ -3,6 +3,6 @@ import * as config from '../config';
 
 export class Field extends GameObject {
   constructor() {
-    super(config.FIELD_SIZE, config.FIELD_SIZE);
+    super(config.FIELD_WIDTH, config.FIELD_HEIGHT);
   }
 }

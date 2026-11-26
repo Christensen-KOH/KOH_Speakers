@@ -201,7 +201,7 @@ export type CoopEvent =
 export interface CoopWorld {
   seq: number;
   stage: number;
-  // 52×52 cells of 16px, row-major; sent when the map changes and as a
+  // 88×52 cells of 16px (the 44×26 half-tile widescreen field), row-major; sent when the map changes and as a
   // regular keyframe for late joiners. See src/coop/grid.ts.
   grid?: string;
   baseAlive: boolean;

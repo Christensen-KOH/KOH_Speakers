@@ -9,26 +9,39 @@ export const TILE_SIZE_LARGE = 64;
 export const MAP_TILE_COUNT = 13;
 export const MAP_SIZE = MAP_TILE_COUNT * TILE_SIZE_LARGE;
 
-// Battles run on the authored map itself (see level/buildArena.ts), so the
-// field is the classic board and the map sits at its origin.
-export const FIELD_TILE_COUNT = MAP_TILE_COUNT;
-export const FIELD_SIZE = FIELD_TILE_COUNT * TILE_SIZE_LARGE;
-export const MAP_OFFSET = { x: 0, y: 0 };
+// Battles run on a widescreen field: 44x26 half-tiles (22x13 large tiles,
+// ~16:9). The authored 26x26 map sits in the middle and level/buildArena.ts
+// fills the 9-half-tile wings on each side by mirroring its outer edges.
+export const HALF_TILE_SIZE = TILE_SIZE_MEDIUM;
+export const MAP_COLS = 44;
+export const MAP_ROWS = 26;
+export const FIELD_WIDTH = MAP_COLS * HALF_TILE_SIZE;
+export const FIELD_HEIGHT = MAP_ROWS * HALF_TILE_SIZE;
+export const MAP_WIDTH = FIELD_WIDTH;
+export const MAP_HEIGHT = FIELD_HEIGHT;
+// Half-tiles of mirrored terrain left and right of the authored map.
+export const MAP_WING_COLS = (MAP_COLS - MAP_TILE_COUNT * 2) / 2;
+export const MAP_OFFSET = { x: MAP_WING_COLS * HALF_TILE_SIZE, y: 0 };
 
 export const BORDER_LEFT_WIDTH = 64;
 export const BORDER_RIGHT_WIDTH = 128;
 export const BORDER_TOP_BOTTOM_HEIGHT = 32;
-function borderRects(size: number): Rect[] {
-  const width = BORDER_LEFT_WIDTH + size + BORDER_RIGHT_WIDTH;
+function borderRects(fieldWidth: number, fieldHeight: number): Rect[] {
+  const width = BORDER_LEFT_WIDTH + fieldWidth + BORDER_RIGHT_WIDTH;
   return [
     // Top
     { x: 0, y: 0, width, height: BORDER_TOP_BOTTOM_HEIGHT },
     // Bottom
-    { x: 0, y: size + BORDER_TOP_BOTTOM_HEIGHT, width, height: BORDER_TOP_BOTTOM_HEIGHT },
+    { x: 0, y: fieldHeight + BORDER_TOP_BOTTOM_HEIGHT, width, height: BORDER_TOP_BOTTOM_HEIGHT },
     // Left
-    { x: 0, y: BORDER_TOP_BOTTOM_HEIGHT, width: BORDER_LEFT_WIDTH, height: size },
+    { x: 0, y: BORDER_TOP_BOTTOM_HEIGHT, width: BORDER_LEFT_WIDTH, height: fieldHeight },
     // Right
-    { x: BORDER_LEFT_WIDTH + size, y: BORDER_TOP_BOTTOM_HEIGHT, width: BORDER_RIGHT_WIDTH, height: size },
+    {
+      x: BORDER_LEFT_WIDTH + fieldWidth,
+      y: BORDER_TOP_BOTTOM_HEIGHT,
+      width: BORDER_RIGHT_WIDTH,
+      height: fieldHeight,
+    },
   ];
 }
 
@@ -40,15 +53,15 @@ interface Rect {
 }
 
 // Walls around the battle arena and around the editor's map
-export const BORDER_RECTS = borderRects(FIELD_SIZE);
-export const EDITOR_BORDER_RECTS = borderRects(MAP_SIZE);
+export const BORDER_RECTS = borderRects(FIELD_WIDTH, FIELD_HEIGHT);
+export const EDITOR_BORDER_RECTS = borderRects(MAP_SIZE, MAP_SIZE);
 
 // Logical screen for menus and on-screen notices; the camera fits it to the
 // viewport. Battles draw the larger world through the follow camera.
 export const CANVAS_WIDTH = MAP_SIZE + BORDER_LEFT_WIDTH + BORDER_RIGHT_WIDTH;
 export const CANVAS_HEIGHT = MAP_SIZE + BORDER_TOP_BOTTOM_HEIGHT * 2;
-export const WORLD_WIDTH = FIELD_SIZE + BORDER_LEFT_WIDTH + BORDER_RIGHT_WIDTH;
-export const WORLD_HEIGHT = FIELD_SIZE + BORDER_TOP_BOTTOM_HEIGHT * 2;
+export const WORLD_WIDTH = FIELD_WIDTH + BORDER_LEFT_WIDTH + BORDER_RIGHT_WIDTH;
+export const WORLD_HEIGHT = FIELD_HEIGHT + BORDER_TOP_BOTTOM_HEIGHT * 2;
 
 export const BRICK_TILE_SIZE = TILE_SIZE_SMALL;
 export const BRICK_SUPER_TILE_SIZE = TILE_SIZE_MEDIUM;
@@ -140,6 +153,27 @@ export const STORAGE_KEY_SETTINGS_SEEN_EDITOR_HINT =
 export const STORAGE_KEY_SETTINGS_SHOW_LEVEL_HINT = 'settings.show-level-hint';
 export const STORAGE_KEY_SETTINGS_SHOW_EDITOR_HINT =
   'settings.show-editor-hint';
+
+// Battle spawns in field coordinates (64px-aligned so Recharge Pads fit):
+// players flank the Eagle (slots 1-2 are the solo / 2-player spawns),
+// enemies enter through 5 evenly spaced lanes along the top row.
+export const FIELD_PLAYER_SPAWN_POSITIONS = [
+  { x: 512, y: 768 },
+  { x: 832, y: 768 },
+  { x: 512, y: 704 },
+  { x: 832, y: 704 },
+  { x: 448, y: 768 },
+  { x: 896, y: 768 },
+  { x: 448, y: 704 },
+  { x: 896, y: 704 },
+];
+export const FIELD_ENEMY_SPAWN_POSITIONS = [
+  { x: (FIELD_WIDTH - TILE_SIZE_LARGE) / 2, y: 0 },
+  { x: 0, y: 0 },
+  { x: FIELD_WIDTH - TILE_SIZE_LARGE, y: 0 },
+  { x: 320, y: 0 },
+  { x: FIELD_WIDTH - TILE_SIZE_LARGE - 320, y: 0 },
+];
 
 // Spawn defaults are in authored-map coordinates
 export const PLAYER_DEFAULT_SPAWN_POSITIONS = [

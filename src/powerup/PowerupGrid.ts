@@ -32,13 +32,13 @@ export class PowerupGrid {
 
   constructor() {
     this.tileSize = config.TILE_SIZE_MEDIUM;
-    this.rowCount = config.FIELD_SIZE / this.tileSize;
-    this.colCount = config.FIELD_SIZE / this.tileSize;
+    this.rowCount = config.FIELD_HEIGHT / this.tileSize;
+    this.colCount = config.FIELD_WIDTH / this.tileSize;
 
-    for (let rowIndex = 0; rowIndex < this.colCount; rowIndex += 1) {
+    for (let rowIndex = 0; rowIndex < this.rowCount; rowIndex += 1) {
       this.grid[rowIndex] = [];
 
-      for (let colIndex = 0; colIndex < this.rowCount; colIndex += 1) {
+      for (let colIndex = 0; colIndex < this.colCount; colIndex += 1) {
         this.grid[rowIndex][colIndex] = true;
       }
     }
@@ -71,9 +71,9 @@ export class PowerupGrid {
       Math.max(0, Math.floor(rect.y / this.tileSize)),
     );
     const maxIndex = new Vector(
-      Math.min(this.rowCount, Math.ceil((rect.x + rect.width) / this.tileSize)),
+      Math.min(this.colCount, Math.ceil((rect.x + rect.width) / this.tileSize)),
       Math.min(
-        this.colCount,
+        this.rowCount,
         Math.ceil((rect.y + rect.height) / this.tileSize),
       ),
     );

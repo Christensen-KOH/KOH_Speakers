@@ -57,8 +57,8 @@ export function drawArenaFloor(
   const top = config.BORDER_TOP_BOTTOM_HEIGHT;
   const x0 = Math.max(visible.x, left);
   const y0 = Math.max(visible.y, top);
-  const x1 = Math.min(visible.x + visible.width, left + config.FIELD_SIZE);
-  const y1 = Math.min(visible.y + visible.height, top + config.FIELD_SIZE);
+  const x1 = Math.min(visible.x + visible.width, left + config.FIELD_WIDTH);
+  const y1 = Math.min(visible.y + visible.height, top + config.FIELD_HEIGHT);
   if (x1 <= x0 || y1 <= y0) {
     return;
   }

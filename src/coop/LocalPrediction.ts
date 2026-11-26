@@ -76,8 +76,8 @@ export class LocalPrediction {
 
   private drive(mx: number, my: number, distance: number, solids: SolidRect[]): void {
     const length = Math.hypot(mx, my);
-    this.x = clamp(this.x + (mx / length) * distance, HALF, config.FIELD_SIZE - HALF);
-    this.y = clamp(this.y + (my / length) * distance, HALF, config.FIELD_SIZE - HALF);
+    this.x = clamp(this.x + (mx / length) * distance, HALF, config.FIELD_WIDTH - HALF);
+    this.y = clamp(this.y + (my / length) * distance, HALF, config.FIELD_HEIGHT - HALF);
 
     const boxes = [];
     for (const solid of solids) {

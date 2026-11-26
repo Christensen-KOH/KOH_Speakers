@@ -1,6 +1,8 @@
 /* Gimkit-inspired palette and glass surfaces for all DOM overlays. */
 :root {
   --tk-font: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  /* Slim top bar; the stage takes calc(100dvh - this). */
+  --tk-topbar-h: 44px;
 
   --tk-glass-bg: rgba(20, 22, 40, 0.62);
   --tk-glass-border: rgba(255, 255, 255, 0.16);

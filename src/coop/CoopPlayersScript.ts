@@ -10,25 +10,10 @@ import * as config from '../config';
 import { CoopRoster, CoopSeat } from './CoopRoster';
 import { RemoteTankBehavior } from './RemoteTankBehavior';
 
-// Spawn cells (top-left, 64px) around the base, by slot, in authored-map
-// coordinates. The first two are the classic Battle City spawns; the map is
-// cleared at all of them.
-export const COOP_MAP_SPAWNS = [
-  { x: 256, y: 768 },
-  { x: 512, y: 768 },
-  { x: 256, y: 704 },
-  { x: 512, y: 704 },
-  { x: 192, y: 768 },
-  { x: 576, y: 768 },
-  { x: 192, y: 704 },
-  { x: 576, y: 704 },
-];
-
-// The same cells in the arena
-export const COOP_SPAWNS = COOP_MAP_SPAWNS.map(({ x, y }) => ({
-  x: config.MAP_OFFSET.x + x,
-  y: config.MAP_OFFSET.y + y,
-}));
+// Spawn cells (top-left, 64px) by slot, in field coordinates: pairs on
+// either side of the centred Eagle base, alternating left/right so seats
+// spread out evenly. buildArena clears the terrain at all of them.
+export const COOP_SPAWNS = config.FIELD_PLAYER_SPAWN_POSITIONS;
 
 const RESPAWN_DELAY = config.PLAYER_SPAWN_DELAY;
 const THINKING_SHIELD = 0.6;

@@ -160,19 +160,21 @@ export class TerrainFactory {
 
   private static createMapFromBrickRegions(regionRects: Rect[]): TerrainTile[] {
     const superTileSize = config.BRICK_SUPER_TILE_SIZE;
-    const superTileCount = config.FIELD_SIZE / superTileSize;
+    const superRowCount = config.FIELD_HEIGHT / superTileSize;
+    const superColCount = config.FIELD_WIDTH / superTileSize;
 
     const superGrid = [];
 
-    for (let rowIndex = 0; rowIndex < superTileCount; rowIndex += 1) {
+    for (let rowIndex = 0; rowIndex < superRowCount; rowIndex += 1) {
       superGrid[rowIndex] = [];
-      for (let colIndex = 0; colIndex < superTileCount; colIndex += 1) {
+      for (let colIndex = 0; colIndex < superColCount; colIndex += 1) {
         superGrid[rowIndex][colIndex] = [];
       }
     }
 
     const subTileSize = config.BRICK_TILE_SIZE;
-    const subTileCount = config.FIELD_SIZE / subTileSize;
+    const subColCount = config.FIELD_WIDTH / subTileSize;
+    const subRowCount = config.FIELD_HEIGHT / subTileSize;
 
     const ratio = superTileSize / subTileSize;
 
@@ -185,11 +187,11 @@ export class TerrainFactory {
       );
       const maxIndex = new Vector(
         Math.min(
-          subTileCount,
+          subColCount,
           Math.ceil((regionRect.x + regionRect.width) / subTileSize),
         ),
         Math.min(
-          subTileCount,
+          subRowCount,
           Math.ceil((regionRect.y + regionRect.height) / subTileSize),
         ),
       );
@@ -223,8 +225,8 @@ export class TerrainFactory {
     const superTiles = [];
 
     // Go over super-grid to create super-tiles
-    for (let rowIndex = 0; rowIndex < superTileCount; rowIndex += 1) {
-      for (let colIndex = 0; colIndex < superTileCount; colIndex += 1) {
+    for (let rowIndex = 0; rowIndex < superRowCount; rowIndex += 1) {
+      for (let colIndex = 0; colIndex < superColCount; colIndex += 1) {
         const subTiles = superGrid[rowIndex][colIndex];
         if (subTiles.length === 0) {
           continue;

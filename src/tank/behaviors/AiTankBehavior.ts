@@ -17,7 +17,7 @@ const THINK_DURATION = 0.3;
 const FIRE_MIN_DELAY = 0;
 // Fire rate, targeting and flanking chances scale with the stage; see
 // getEnemyAggression in level/Difficulty.ts.
-const FAR_DISTANCE = config.MAP_SIZE / 2;
+const FAR_DISTANCE = config.FIELD_HEIGHT / 2;
 const ROTATE_UP_CHANCE = 10;
 
 const ROTATIONS = [Rotation.Up, Rotation.Down, Rotation.Left, Rotation.Right];

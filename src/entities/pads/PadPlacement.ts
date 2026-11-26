@@ -8,16 +8,17 @@ interface Point {
   y: number;
 }
 
-// Cells near the base tried in order for the default Upgrade Pad.
+// Cells near the base tried in order for the default Upgrade Pad, in
+// widescreen field coordinates (64px-aligned, outside the player spawns).
 const UPGRADE_PAD_CANDIDATES: Point[] = [
-  { x: 128, y: 768 },
-  { x: 640, y: 768 },
-  { x: 0, y: 768 },
-  { x: 768, y: 768 },
-  { x: 128, y: 704 },
-  { x: 640, y: 704 },
-  { x: 0, y: 704 },
-  { x: 768, y: 704 },
+  { x: 384, y: 768 },
+  { x: 960, y: 768 },
+  { x: 384, y: 704 },
+  { x: 960, y: 704 },
+  { x: 256, y: 768 },
+  { x: 1088, y: 768 },
+  { x: 256, y: 704 },
+  { x: 1088, y: 704 },
 ];
 
 function padRegion(type: TerrainType, { x, y }: Point): TerrainRegionConfig {
@@ -30,7 +31,8 @@ function toRect(region: TerrainRegionConfig): Rect {
 }
 
 /**
- * Adds TankKit pads to maps that don't define their own (all 35 classic maps):
+ * Adds TankKit pads to the battle field (field coordinates, see
+ * level/buildArena.ts) when it has none:
  * a Recharge Pad on each player spawn and one Upgrade Pad on the first free
  * cell near the base. Maps that already place pads are returned unchanged.
  */
@@ -50,7 +52,7 @@ export function withDefaultPads(
   }
 
   if (!hasType(TerrainType.UpgradePad)) {
-    const { x, y } = config.MAP_BASE_POSITION;
+    const { x, y } = config.BASE_DEFAULT_POSITION;
     const { width, height } = config.BASE_DEFAULT_SIZE;
     const occupied = [
       ...result.map(toRect),

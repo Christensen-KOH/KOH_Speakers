@@ -149,14 +149,22 @@ class BattleCamera {
 
     let world = screen;
     if (this.active) {
-      // Desktop shows as much as the classic screen did; touch fills the
-      // screen so the tank stays big under the thumbs.
-      const cover = Math.max(width / config.CANVAS_WIDTH, height / config.CANVAS_HEIGHT);
-      const zoom = snapZoom(this.fullmap ? cover : fit);
+      // Desktop / landscape: the whole 44x26 field edge to edge. Portrait
+      // phones: the field's full height, with the camera lerping after the
+      // local tank sideways (clamped to the field) so tiles stay big.
+      const fieldW = config.FIELD_WIDTH;
+      const fieldH = config.FIELD_HEIGHT;
+      const portrait = height > width;
+      const zoom = snapZoom(
+        portrait ? height / fieldH : Math.min(width / fieldW, height / fieldH),
+      );
       const viewW = width / zoom;
       const viewH = height / zoom;
-      const cx = this.clampAxis(this.cx, viewW, config.WORLD_WIDTH);
-      const cy = this.clampAxis(this.cy, viewH, config.WORLD_HEIGHT);
+      // Clamp to the field itself, so no border shows when the view fits
+      const left = config.BORDER_LEFT_WIDTH;
+      const top = config.BORDER_TOP_BOTTOM_HEIGHT;
+      const cx = left + this.clampAxis(this.cx - left, viewW, fieldW);
+      const cy = top + this.clampAxis(this.cy - top, viewH, fieldH);
       world = this.centred(zoom, width, height, cx, cy);
     }
 

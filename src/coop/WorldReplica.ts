@@ -133,7 +133,7 @@ class ReplicaTank extends SpriteObject {
  * snapshots: no physics, no AI, just the same sprites in the same places.
  */
 export class WorldReplica {
-  public readonly field = new GameObject(config.FIELD_SIZE, config.FIELD_SIZE);
+  public readonly field = new GameObject(config.FIELD_WIDTH, config.FIELD_HEIGHT);
   private readonly spriteLoader: SpriteLoader;
   private readonly sprites = new Map<string, Sprite>();
   private readonly blocks = new Map<number, TerrainTile[]>();

@@ -1,4 +1,4 @@
-import { GameObject, Rect, Subject } from '../core';
+import { GameObject, Subject } from '../core';
 import { AutoTurret } from '../entities/AutoTurret';
 import { GameUpdateArgs } from '../game';
 import { Border, Bullet, EnemyTank, TankState, TerrainTile } from '../gameObjects';
@@ -20,7 +20,7 @@ import { PLAYER_MAX_HP, TankDeathReason } from '../tank';
 import { TerrainFactory } from '../terrain';
 import * as config from '../config';
 
-import { COOP_MAP_SPAWNS, CoopPlayersScript } from './CoopPlayersScript';
+import { CoopPlayersScript } from './CoopPlayersScript';
 import { CoopRoster } from './CoopRoster';
 import { encodeGrid, GridTile, packGrid } from './grid';
 
@@ -80,10 +80,7 @@ export class CoopHostBattle {
     this.world.field.position.set(config.BORDER_LEFT_WIDTH, config.BORDER_TOP_BOTTOM_HEIGHT);
     root.add(this.world.field);
 
-    // Every student spawn must be drivable
-    COOP_MAP_SPAWNS.forEach(({ x, y }) => {
-      mapConfig.clearTerrainRect(new Rect(x, y, config.TILE_SIZE_LARGE, config.TILE_SIZE_LARGE));
-    });
+    // Widescreen field; every student spawn is cleared by buildArena
     const arena = buildArena(mapConfig, stage);
     this.world.field.add(...TerrainFactory.createMapFromRegionConfigs(arena.getTerrainRegions()));
 
