@@ -109,8 +109,13 @@ export class PlayerTank extends Tank {
     this.skinAnimation = this.currentSkinAnimation();
   }
 
-  private currentSkinAnimation(): TankSkinAnimation {
+  // Undefined until setup() builds the skins: the level may set the tier
+  // (upgrade) before the tank is added, and setup picks the skin up then.
+  private currentSkinAnimation(): TankSkinAnimation | undefined {
     const phases = this.tierSkinAnimations.get(this.type.tier);
+    if (phases === undefined || phases.length === 0) {
+      return undefined;
+    }
     const phase = getSkinPhase(this.skinId, this.skinClock);
     return phases[phase % phases.length];
   }
@@ -127,7 +132,7 @@ export class PlayerTank extends Tank {
 
     this.skinClock += deltaTime;
     const next = this.currentSkinAnimation();
-    if (next !== this.skinAnimation) {
+    if (next !== undefined && next !== this.skinAnimation) {
       this.skinAnimation = next;
     }
 
@@ -182,7 +187,7 @@ export class PlayerTank extends Tank {
     this.type.increaseTier(targetTier);
 
     this.refreshLoadout();
-    this.skinAnimation = this.currentSkinAnimation();
+    this.skinAnimation = this.currentSkinAnimation() ?? this.skinAnimation;
 
     if (notify === true) {
       this.upgraded.notify({ tier: this.type.tier });
